@@ -6,7 +6,7 @@ config.set("throughline.projectFolder", "Work/")
 config.set("throughline.states", {
   { state = " ",         label = "To do" },
   { state = "DOING",     label = "Doing" },
-  { state = "REVIEW",    label = "In review" },
+  { state = "REVIEW",    label = "In review", category = "active" },
   { state = "WAITING",   label = "Waiting",   column = "Parked" },
   { state = "BLOCKED",   label = "Blocked",   column = "Parked" },
   { state = "x",         label = "Done",      closed = true },
