@@ -1,0 +1,3 @@
+- [ ] write the about page [[Projects/Website]] [scheduled: 2026-10-20]
+  - [ ] team photo
+  - [ ] contact details

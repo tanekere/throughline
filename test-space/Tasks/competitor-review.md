@@ -1,0 +1,1 @@
+- [x] review competitor websites [[Projects/Website]] [due: 2026-10-10]
