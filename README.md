@@ -9,9 +9,34 @@ Requires SilverBullet 2.12 or later. Pure Space Lua and Space Style, no plug.
 ## Install
 
 Run `Library: Install` and give it
-`ghr:tanekere/throughline/Throughline.md`,
-or copy `Throughline.md` to `Library/tanekere/Throughline.md` in your space and
+
+```
+ghr:tanekere/throughline/Throughline.md
+```
+
+That is SilverBullet's GitHub-releases address: it installs `Throughline.md`
+from the latest full release, never a pre-release or unreleased work on `main`.
+Configuration → Libraries → Update all later fetches the newest full release
+the same way. SilverBullet does not update on its own.
+
+Or copy `Throughline.md` to `Library/tanekere/Throughline.md` in your space and
 reload.
+
+## Releasing
+
+Throughline is alpha software: versions are 0.0.x.
+
+1. Add a `## X.Y.Z (date)` section to `CHANGELOG.md` on `main`.
+2. Tag the release commit `vX.Y.Z` and push the tag.
+
+The workflow in `.github/workflows/release.yml` then creates the GitHub release
+with `Throughline.md` attached and the changelog section as its notes. It
+refuses a tag without a changelog section.
+
+- `vX.Y.Z` is a full release. It becomes the one `ghr:` installs only if no
+  higher version is released, so tagging an old version is safe.
+- `vX.Y.Z-rc1` (anything after a dash) is a pre-release, which `ghr:` skips.
+  Use one to try a version before it reaches anyone's space.
 
 ## How it works
 
@@ -162,11 +187,19 @@ picker.
 
 ## Configuration
 
-In the Configuration Manager under **Throughline**, or in Space Lua:
+Run **Configuration: Open** and go to the **Throughline** section. Theme,
+folders, update cadence and the Upcoming range are set there; Save & Apply
+writes them to `CONFIG`.
+
+The theme is **native** by default: SilverBullet's own font, colours and
+buttons, no backgrounds, dotted lines. **lineish** is the card-and-panel look
+after Linear. A change shows within a second, without a reload.
+
+The state and project status lists are lists, which the menu cannot edit; the
+menu shows them as "Configure manually in CONFIG". Their defaults, to copy into
+`CONFIG` and change:
 
 ```lua
-config.set("throughline.taskFolder", "Tasks/")
-config.set("throughline.projectFolder", "Projects/")
 config.set("throughline.states", {
   { state = " ",         label = "Planned",   category = "planned",   column = "To do", drop = true },
   { state = "BACKLOG",   label = "Backlog",   category = "backlog",   column = "To do" },
@@ -184,8 +217,6 @@ config.set("throughline.projectStatuses", {
   { status = "done",    label = "Done",    category = "completed" },
   { status = "dropped", label = "Dropped", category = "canceled" },
 })
-config.set("throughline.updateDays", 7)
-config.set("throughline.upcomingDays", 7)
 ```
 
 States are listed in board order. Task categories are `backlog`, `planned`,
@@ -194,7 +225,7 @@ States are listed in board order. Task categories are `backlog`, `planned`,
 with the same `column` share a board column; a card dropped into it takes the
 state marked `drop = true` (else the column's first). done and cancelled states
 share the Done column. Icons exist for the default states; any other state
-shows as SilverBullet's text. A 0.1 configuration without categories still works:
+shows as SilverBullet's text. A 0.0.1 configuration without categories still works:
 `closed = true` reads as done, the default state names (DOING, WAITING,
 BLOCKED, BACKLOG, CANCELLED) keep their usual category, and any other state is
 planned until you give it one.

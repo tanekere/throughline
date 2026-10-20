@@ -51,14 +51,14 @@ config.define("throughline.taskFolder", {
   description = "Folder holding task pages, with a trailing slash.",
   type = "string",
   default = "Tasks/",
-  ui = { category = "Throughline", label = "Task folder" },
+  ui = { category = "Throughline", label = "Task folder", priority = 5 },
 })
 
 config.define("throughline.projectFolder", {
   description = "Folder holding project pages, with a trailing slash.",
   type = "string",
   default = "Projects/",
-  ui = { category = "Throughline", label = "Project folder" },
+  ui = { category = "Throughline", label = "Project folder", priority = 4 },
 })
 
 config.define("throughline.states", {
@@ -94,14 +94,22 @@ config.define("throughline.updateDays", {
   description = "Days between project updates. An active project whose latest update is older shows as stale; older than twice this, as update missing.",
   type = "number",
   default = 7,
-  ui = { category = "Throughline", label = "Update cadence (days)" },
+  ui = { category = "Throughline", label = "Update cadence (days)", priority = 3 },
 })
 
 config.define("throughline.upcomingDays", {
   description = "How many days ahead the Focus list's Upcoming section reaches.",
   type = "number",
   default = 7,
-  ui = { category = "Throughline", label = "Upcoming (days)" },
+  ui = { category = "Throughline", label = "Upcoming (days)", priority = 2 },
+})
+
+config.define("throughline.theme", {
+  description = "How the widgets look: native (SilverBullet's own colours and font, dotted lines) or lineish (cards and panels in the style of Linear).",
+  type = "string",
+  enum = { "native", "lineish" },
+  default = "native",
+  ui = { category = "Throughline", label = "Theme", priority = 6 },
 })
 
 function tl.taskFolder() return config.get("throughline.taskFolder", "Tasks/") end
@@ -110,6 +118,7 @@ function tl.states() return config.get("throughline.states", {}) end
 function tl.projectStatuses() return config.get("throughline.projectStatuses", {}) end
 function tl.updateDays() return config.get("throughline.updateDays", 7) end
 function tl.upcomingDays() return config.get("throughline.upcomingDays", 7) end
+function tl.theme() return config.get("throughline.theme", "native") end
 
 -- Defining the custom states gives completion and SilverBullet's state picker.
 for _, st in ipairs(tl.states()) do
@@ -1783,8 +1792,18 @@ event.listen {
     pcall(tl.markLinks)
     pcall(tl.markProjectPage)
     pcall(tl.applyPendingFilters)
+    pcall(tl.applyTheme)
   end,
 }
+
+-- The style keys every theme off one attribute on <html>. Set on load and
+-- checked every tick, so a changed config shows without a reload.
+function tl.applyTheme()
+  local root = js.window.document.documentElement
+  local theme = tl.theme()
+  if root.getAttribute("data-tl-theme") ~= theme then root.setAttribute("data-tl-theme", theme) end
+end
+pcall(tl.applyTheme)
 
 -- A click on a projection's icon opens SilverBullet's picker; a click on its
 -- text navigates as usual.
@@ -2141,7 +2160,9 @@ html[data-theme="dark"] {
 .tl-icon[data-tl-state="done"],
 #sb-main a.sb-wiki-link[data-tl-state="done"]::before {
   border-radius: 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.5' fill='%235e6ad2'/%3E%3Cpath d='M4 8.3l2.6 2.6L12 5.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  background: var(--tl-accent); /* a filled square with the tick cut out */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cmask id='m'%3E%3Crect width='16' height='16' rx='3.5' fill='white'/%3E%3Cpath d='M4 8.3l2.6 2.6L12 5.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Crect width='16' height='16' rx='3.5' mask='url(%23m)'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cmask id='m'%3E%3Crect width='16' height='16' rx='3.5' fill='white'/%3E%3Cpath d='M4 8.3l2.6 2.6L12 5.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Crect width='16' height='16' rx='3.5' mask='url(%23m)'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 /* BACKLOG: a dashed circle */
@@ -2245,7 +2266,9 @@ html[data-theme="dark"] {
   background: linear-gradient(90deg, transparent 30%, var(--tl-grey) 30% 43%, transparent 43% 57%, var(--tl-grey) 57% 70%, transparent 70%) center / 100% 46% no-repeat;
 }
 .tl-picon[data-cat="completed"] {
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%235e6ad2'/%3E%3Cpath d='M4.6 8.2l2.3 2.3L11.4 6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  background: var(--tl-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cmask id='m'%3E%3Ccircle cx='8' cy='8' r='8' fill='white'/%3E%3Cpath d='M4.6 8.2l2.3 2.3L11.4 6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='8' cy='8' r='8' mask='url(%23m)'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cmask id='m'%3E%3Ccircle cx='8' cy='8' r='8' fill='white'/%3E%3Cpath d='M4.6 8.2l2.3 2.3L11.4 6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Ccircle cx='8' cy='8' r='8' mask='url(%23m)'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .tl-picon[data-cat="canceled"]  {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%239ca0a8'/%3E%3Cpath d='M5.5 5.5l5 5M10.5 5.5l-5 5' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -2562,9 +2585,10 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background:
-    radial-gradient(closest-side, var(--tl-surface) 62%, transparent 64%),
-    conic-gradient(var(--tl-violet) calc(var(--tl-pct) * 1%), var(--tl-line-strong) 0);
+  background: conic-gradient(var(--tl-violet) calc(var(--tl-pct) * 1%), var(--tl-line-strong) 0);
+  /* the hole is cut out, so the ring sits on any background */
+  -webkit-mask: radial-gradient(closest-side, transparent 60%, #000 64%);
+          mask: radial-gradient(closest-side, transparent 60%, #000 64%);
 }
 .tl-progress-none { color: var(--tl-faint); }
 
@@ -2723,4 +2747,151 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
 /* on project pages the board replaces SilverBullet's own task panels */
 body.tl-project .sb-page-widget[data-view="std.linkedTasks"],
 body.tl-project .sb-page-widget[data-view="std.linkedMentions"] { display: none; }
+
+/* ---- Theme: native -------------------------------------------------------
+   Everything above is the lineish theme. native keeps the same layout but
+   takes SilverBullet's own font and colours, drops the panel backgrounds and
+   shadows, and draws its rules as dotted lines. Selected by
+   throughline.theme, which sets html[data-tl-theme]. */
+html[data-tl-theme="native"] {
+  --tl-font: var(--editor-font);
+  --tl-ink: var(--root-color);
+  --tl-ink-2: var(--root-color);
+  --tl-muted: var(--subtle-color);
+  --tl-faint: var(--meta-subtle-color);
+  --tl-line: var(--ui-surface-border-color);
+  --tl-line-strong: color-mix(in srgb, var(--subtle-color) 45%, transparent);
+  --tl-dots: color-mix(in srgb, var(--subtle-color) 55%, transparent);
+  --tl-surface: transparent;
+  --tl-surface-2: transparent;
+  --tl-hover: var(--subtle-background-color);
+  --tl-accent: var(--ui-accent-color);
+  --tl-violet: var(--ui-accent-color);
+  --tl-shadow: none;
+  --tl-shadow-lift: none;
+  --tl-overdue-bg: transparent;
+  --tl-today-bg: transparent;
+}
+html[data-tl-theme="native"] :is(.tl-board, .tl-projects, .tl-focus) {
+  font-size: 0.95em;
+  line-height: 1.5;
+  -webkit-font-smoothing: auto;
+}
+html[data-tl-theme="native"] :is(.tl-board, .tl-projects, .tl-focus) :is(button, select, option) {
+  font-family: var(--ui-font, var(--tl-font)) !important;
+}
+
+/* small print in em, so it follows the editor's size */
+html[data-tl-theme="native"] :is(.tl-chip, .tl-ccount, .tl-health, .tl-progress, .tl-update-date,
+    .tl-stat-label, .tl-filter, .tl-button, .tl-toggle-closed, .tl-state, .tl-ptoolbar-count) {
+  font-size: 0.85em;
+}
+html[data-tl-theme="native"] :is(.tl-col-head, .tl-psection-head, .tl-fsection-head, .tl-ptoolbar-title,
+    .tl-stat-value, .tl-pstatus, .tl-pname, .tl-focus-empty) {
+  font-size: 1em;
+}
+
+/* chips are plain words, coloured only when they mean something */
+html[data-tl-theme="native"] .tl-chip { border: none; background: none; padding: 0; border-radius: 0; }
+html[data-tl-theme="native"] .tl-row-meta { gap: 0.9em; }
+html[data-tl-theme="native"] .tl-chips { gap: 0.9em; }
+html[data-tl-theme="native"] .tl-today { color: #9a6700; }
+html[data-theme="dark"][data-tl-theme="native"] .tl-today { color: var(--tl-amber); }
+html[data-tl-theme="native"] .tl-src { font-style: italic; }
+html[data-tl-theme="native"] .tl-pdot { border-radius: 50%; opacity: 1; }
+html[data-tl-theme="native"] .tl-ptoolbar-count { background: none; padding: 0; }
+
+/* buttons and pickers: SilverBullet's own buttons; selects read as text */
+html[data-tl-theme="native"] .tl-button {
+  color: var(--button-color);
+  background: var(--button-background-color);
+  border: 1px solid var(--button-border-color);
+  border-radius: 5px;
+  box-shadow: none;
+}
+html[data-tl-theme="native"] .tl-button:hover { background: var(--button-hover-background-color); }
+html[data-tl-theme="native"] .tl-ghost { background: transparent; border-color: transparent; color: var(--tl-muted); }
+html[data-tl-theme="native"] :is(.tl-state, .tl-pstatus, .tl-toggle-closed, .tl-filter) {
+  color: var(--tl-ink);
+  background: transparent;
+  border: 1px dotted var(--tl-dots);
+  border-radius: 4px;
+}
+html[data-tl-theme="native"] :is(.tl-state, .tl-pstatus) { border-width: 0 0 1px; border-radius: 0; padding: 0 2px; margin-left: 0; }
+html[data-tl-theme="native"] :is(.tl-toggle-closed, .tl-filter):hover { background: transparent; border-style: solid; }
+html[data-tl-theme="native"] .tl-filter-on { color: var(--tl-accent); border: 1px solid var(--tl-accent); background: transparent; }
+
+/* dotted outlines instead of panels */
+html[data-tl-theme="native"] :is(.tl-col, .tl-card, .tl-pcard, .tl-focus-empty, .tl-fold-head) {
+  background: transparent;
+  border: 1px dotted var(--tl-dots);
+  border-radius: 4px;
+  box-shadow: none;
+}
+html[data-tl-theme="native"] :is(.tl-card, .tl-pcard):hover,
+html[data-tl-theme="native"] :is(.tl-card, .tl-pcard)[open] { border-color: var(--subtle-color); }
+/* board columns are open: a heading over a dotted rule, cards below */
+html[data-tl-theme="native"] .tl-col { border: none; padding: 0 2px; }
+html[data-tl-theme="native"] .tl-col-head {
+  font-weight: 600;
+  color: var(--tl-ink);
+  padding: 2px 2px;
+  margin-bottom: 8px;
+  border-bottom: 1px dotted var(--tl-dots);
+}
+html[data-tl-theme="native"] .tl-board { gap: 14px; }
+/* the overview stays in the text column, like the rest of the page */
+html[data-tl-theme="native"] .tl-projects { width: auto; left: auto; transform: none; }
+html[data-tl-theme="native"] :is(.tl-card-body, .tl-pcard-body) { border-top: 1px dotted var(--tl-dots); }
+html[data-tl-theme="native"] .tl-drop-marker { box-shadow: none; }
+html[data-tl-theme="native"] .tl-chev { color: var(--tl-muted); }
+html[data-tl-theme="native"] .tl-pcard-head:hover .tl-chev { background: none; color: var(--tl-ink); }
+html[data-tl-theme="native"] .tl-pname {
+  color: var(--editor-wiki-link-page-color, var(--link-color)) !important;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* section heads: bold text over a dotted rule */
+html[data-tl-theme="native"] .tl-psection-head,
+html[data-tl-theme="native"] .tl-fsection-head {
+  background: none;
+  padding: 2px 0;
+  font-weight: 600;
+  color: var(--tl-ink);
+  border-bottom: 1px dotted var(--tl-dots);
+}
+html[data-tl-theme="native"] .tl-fsection {
+  border: none;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  margin-bottom: 14px;
+}
+html[data-tl-theme="native"] .tl-fsection[open] .tl-fsection-head { border-bottom: 1px dotted var(--tl-dots); }
+html[data-tl-theme="native"] .tl-row {
+  padding: 0 4px;
+  min-height: 2.2em;
+  border-bottom: 1px dotted var(--tl-dots);
+}
+html[data-tl-theme="native"] .tl-row:last-child { border-bottom: none; }
+
+/* health: a dot and a word, no pill */
+html[data-tl-theme="native"] .tl-health { border: none; padding: 0; border-radius: 0; }
+
+/* the stats sheet: a dotted ledger */
+html[data-tl-theme="native"] .tl-update {
+  background: none;
+  border: none;
+  border-left: 2px solid var(--tl-dots);
+  border-radius: 0;
+  padding: 2px 0 2px 10px;
+}
+html[data-tl-theme="native"] .tl-stats { border: none; border-radius: 0; column-gap: 18px; }
+html[data-tl-theme="native"] .tl-stat {
+  box-shadow: none;
+  padding: 5px 0;
+  border-bottom: 1px dotted var(--tl-dots);
+}
+html[data-tl-theme="native"] .tl-stat-value { font-weight: 500; }
 ```

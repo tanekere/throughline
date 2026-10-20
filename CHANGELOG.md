@@ -1,11 +1,32 @@
 # Changelog
 
-## 0.2.0 (2026-10-19)
+Throughline is alpha software, so versions are numbered 0.0.x. The first two
+were called 0.1 and 0.2 while they were being written; they are 0.0.1 and
+0.0.2 here and in the release tags.
+
+Versions are released by pushing a tag `vX.Y.Z`; see Releasing in the README.
+
+## 0.0.3 (2026-10-20)
+
+Themes, settings in the Configuration menu, releases.
+
+- Installs and updates come from the latest full GitHub release:
+  `share.uri` is `ghr:tanekere/throughline/Throughline.md`.
+- Theme setting in the Configuration menu (Throughline → Theme): `native`
+  (default) or `lineish`.
+- native: SilverBullet's own font, colours and buttons; no panel backgrounds or
+  shadows; dotted rules and outlines; chips as plain words; the projects
+  overview stays in the text column. Light and dark.
+- lineish: the 0.0.2 look, unchanged.
+- The done and completed icons and the progress ring now take the theme's
+  colours instead of fixed ones.
+
+## 0.0.2 (2026-10-19)
 
 Projects, health and a Focus list, after Linear.
 
 - State categories: backlog, planned, active, held, done, cancelled. The
-  library acts on the category; every default state has one. 0.1
+  library acts on the category; every default state has one. 0.0.1
   configurations without categories still work.
 - New state `[BACKLOG]` (dashed circle), sharing the To do column with `[ ]`,
   now labelled Planned. A card dropped into To do becomes `[ ]`.
@@ -27,7 +48,7 @@ Projects, health and a Focus list, after Linear.
 - Board column headers carry their state icon. New look throughout: Inter
   where installed, hairline borders, Linear's status shapes and colours.
 
-## 0.1.0 (unreleased)
+## 0.0.1 (2026-10-18)
 
 First version.
 

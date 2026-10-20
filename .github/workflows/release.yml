@@ -1,0 +1,74 @@
+# Turns a version tag into a GitHub release that SilverBullet's ghr: scheme can
+# install. Tags arrive from a git push.
+#
+#   v0.0.3        full release; ghr: installs it if it is the highest version
+#   v0.0.4-rc1    pre-release; ghr: skips it
+#
+# Release notes come from the matching "## X.Y.Z" section of CHANGELOG.md on
+# main, so a version can be tagged after the fact. The asset is Throughline.md
+# as it was at the tag.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag and read its changelog section
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$tag is not vX.Y.Z or vX.Y.Z-suffix"
+            exit 1
+          fi
+          test -f Throughline.md || { echo "::error::no Throughline.md at $tag"; exit 1; }
+
+          default="${{ github.event.repository.default_branch }}"
+          git show "origin/$default:CHANGELOG.md" > /tmp/changelog.md
+          # a pre-release (0.0.4-rc1) uses its version's section (0.0.4)
+          awk -v v="${version%%-*}" '
+            $0 ~ "^## " { if (found) exit; if ($2 == v) { found = 1; next } }
+            found { print }
+          ' /tmp/changelog.md > /tmp/notes.md
+          if ! [ -s /tmp/notes.md ]; then
+            echo "::error::CHANGELOG.md on $default has no '## ${version%%-*}' section"
+            exit 1
+          fi
+
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          else
+            # latest only if no full release tag sorts above this one, so
+            # tagging an old version never takes over ghr:
+            highest=$(git tag -l 'v*' | grep -v -- - | sed 's/^v//' | sort -V | tail -n1)
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            if [ "$highest" = "$version" ]; then
+              echo "latest=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "latest=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--verify-tag --title "Throughline ${{ steps.version.outputs.version }}" --notes-file /tmp/notes.md)
+          [ "${{ steps.version.outputs.prerelease }}" = "true" ] && args+=(--prerelease)
+          args+=("--latest=${{ steps.version.outputs.latest }}")
+          gh release create "$GITHUB_REF_NAME" Throughline.md "${args[@]}"
