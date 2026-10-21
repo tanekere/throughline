@@ -4,7 +4,51 @@ Throughline is alpha software, so versions are numbered 0.0.x. The first two
 were called 0.1 and 0.2 while they were being written; they are 0.0.1 and
 0.0.2 here and in the release tags.
 
-Versions are released by pushing a tag `vX.Y.Z`; see Releasing in the README.
+Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
+
+## 0.0.4 (2026-10-21)
+
+- If your space has an older copy of Throughline under a different page name
+  in `Library/`, remove it after installing this one, so only one copy loads.
+- The test spaces use neutral example data.
+- `throughline.lua`: the library's code on its own, for reading with syntax
+  highlighting. EXPLAINER.md links into it.
+- Fixed: reordering cards, posting an update or adding a projection to a
+  project page dropped the page's last line when its text did not end with a
+  newline.
+- Board cards mark a date that is today in amber and say "Today", as the
+  Focus list already did.
+- Click a projection's icon, or its due date, to edit the task in place: a
+  panel with its state, due and scheduled dates (with the browser's calendar)
+  and progress. It replaces the state picker. Every change writes at once.
+- Blocked by: choose the task that blocks this one from the panel or a card,
+  or clear it. Stored as `[blockedBy: [[Tasks/…]]]`; board cards and Focus
+  rows show "⛔ blocked by …", struck through once the blocker is finished.
+- Projections show the task's due date after the link, red once past.
+- Progress: a task's `[progress: n]`, else its share of done subtasks. Shown
+  as a ring on the board card.
+- An expanded board card has the same date and progress fields; its body is
+  built when it is first opened, so boards draw faster.
+- The board card's state dropdown is gone; change state by dragging, or from
+  the task list.
+- A state changed anywhere on the page (the task list, a Focus row) moves the
+  board card at once, and icons no longer flip back to the old state for a
+  few seconds after a change.
+- Faster: projection icons appear about 0.1 s after a page opens instead of up
+  to 1 s; the Focus list draws in about half the time on large spaces; a
+  filtered Focus list no longer shows unfiltered first.
+- Board: a New task button at the end of the To do column creates a task page
+  for the project and adds its card at once.
+- Board: Hide backlog, in the To do column's header of every board, hides
+  backlog cards on all boards; the browser remembers the choice.
+- The thin border SilverBullet draws round a widget no longer shows above and
+  below the board, the projects overview and the Focus list.
+- The Focus list's total in its header follows the filter, like the section
+  counts.
+- EXPLAINER.md: every feature, the code behind it, with screenshots.
+- The code is reorganised and commented for reading; no other behaviour
+  changed. The README is rewritten for people new to Throughline, with
+  screenshots.
 
 ## 0.0.3 (2026-10-20)
 

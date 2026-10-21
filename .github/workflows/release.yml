@@ -25,6 +25,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check that throughline.lua matches Throughline.md
+        run: python3 scripts/extract-lua.py --check
+
       - name: Check the tag and read its changelog section
         id: version
         run: |

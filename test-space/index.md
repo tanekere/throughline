@@ -1,5 +1,7 @@
 # Throughline test space
 
+New in 0.0.4: [[Try this]]
+
 ${throughline.projects()}
 
 ${throughline.focus()}
