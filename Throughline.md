@@ -24,6 +24,67 @@ documentation: https://github.com/tanekere/throughline
 Commands start with `Throughline:`. Settings are under Throughline in
 Configuration: Open.
 
+## How it fits together
+
+1. **Overview.** One page, usually your index, holds the projects overview and
+   the Focus list: every project as a card, and every open task in the order
+   to work through it.
+2. **Projects.** Each project is a page tagged `#project`, with its board, its
+   task list under `## Tasks`, and dated updates under `## Updates`.
+3. **Tasks.** Each task that needs room has a task page in `Tasks/`. Its first
+   task line is the task; the rest of the page is notes and subtasks.
+
+On the levels above it, a task appears as a link with its live state. Change
+it anywhere and its task page is what changes.
+
+## Quick tutorial
+
+About five minutes, on any space.
+
+1. **Make a main page.** Open your index page and add these two lines:
+
+   ```markdown
+   ${throughline.projects()}
+
+   ${throughline.focus()}
+   ```
+
+   That is your main board: the projects overview above, the Focus list below.
+   Everything else is reachable from it.
+
+2. **Create a project.** Press **New project** in the overview's toolbar and
+   give it a name, say "Website". Throughline creates `Projects/Website` with
+   a board and opens it.
+
+3. **Create tasks.** The preferred way is `/task`: under the project's
+   `## Tasks` heading, type `/task` on an empty line and press Enter. Type what
+   needs doing, press Enter, and Enter again to take the suggested page name. Each one gets a task page and a card. Add a few. With
+   the mouse, **New task** at the bottom of the board's To do column does the
+   same.
+
+4. **Set dates, a blocker and progress.** Under the board, the project's task
+   list shows each task as a link. Click a task's icon to open its panel: pick
+   a state, set a due date with the calendar, choose the task it is blocked
+   by, or drag Progress. Open a card on the board for the same fields. From
+   the keyboard, type `/due`, `/scheduled`, `/blocked` or `/progress` on the
+   task's line instead.
+
+5. **Move work along.** Drag a card to Doing when you start it, and to Done
+   when it is finished. Drag cards up and down to set their order.
+
+6. **Say how the project is going.** In the overview, click the project's card
+   (not its name) to open it, press **Post update**, pick On track, At risk or
+   Off track, and write a line. The card shows that health from then on.
+
+7. **Work from the Focus list.** Back on the main page, Focus lists what is
+   overdue, what you are doing, what is due today and what is coming up. Click
+   a row's icon to change its state, or its text to open it.
+
+Tasks you write anywhere else, in a journal for example, show up in Focus too.
+To give one a page and a card, put the cursor on it and type `/task`.
+For the keyboard and vim, see KEYBOARD.md in the
+[repository](https://github.com/tanekere/throughline/blob/main/KEYBOARD.md).
+
 ```space-lua
 -- priority: 10
 --
@@ -204,13 +265,17 @@ local function storeSet(key, value)
   pcall(clientStore.set, key, value)
 end
 
--- SilverBullet's picker over a list of { name = ... } rows; returns the
--- chosen row, or nil when dismissed.
+-- SilverBullet's picker over a list of { name = ..., description = ... }
+-- rows (description optional); returns the chosen row, or nil when dismissed.
 local function pick(title, rows)
+  local row = { primary = "name" }
+  for _, r in ipairs(rows) do
+    if r.description then row.description = "description"; break end
+  end
   return view.pick {
     title = title,
     source = function() return rows end,
-    presentation = { row = { primary = "name" } },
+    presentation = { row = row },
   }
 end
 
@@ -667,6 +732,19 @@ end
 -- changes. `attrs` holds the current attribute values (tl.taskAttrs);
 -- `subs` the task's subtasks, for progress without a value of its own;
 -- `onChange(key, value)` runs after each write.
+-- The open tasks other than page `except`, by title, for a "Blocked by" picker:
+-- the panel's Choose… and /blocked use the same list.
+local function openTaskRows(except)
+  local rows = {}
+  for _, t in ipairs(tl.sources(nil)) do
+    if t.page ~= except and not tl.isClosedState(t.state) then
+      table.insert(rows, { name = tl.plainText(t.name), description = t.page, page = t.page })
+    end
+  end
+  table.sort(rows, function(a, b) return a.name < b.name end)
+  return rows
+end
+
 local function attrForm(page, attrs, subs, onChange)
   local function changed(key, value)
     tl.setTaskAttr(page, key, value)
@@ -707,30 +785,41 @@ local function attrForm(page, attrs, subs, onChange)
     onchange = function(e) changed("progress", e.target.value) end,
   }
   -- Blocked by: another task page, chosen from the open ones
+  -- shown as a link to the blocking task; "nothing" when there is none
   local blocker = linkTarget(attrs.blockedBy)
   local blockerName
-  blockerName = dom.span { class = "tl-attr-value tl-blocker", blocker and tl.titleOf(blocker) or "nothing" }
+  local function showBlocker(target, name)
+    blocker = target
+    blockerName.textContent = target and name or "nothing"
+    if target then blockerName.setAttribute("title", name) else blockerName.removeAttribute("title") end
+    if target then
+      blockerName.setAttribute("href", "/" .. target)
+      blockerName.classList.remove("tl-blocker-none")
+    else
+      blockerName.removeAttribute("href")
+      blockerName.classList.add("tl-blocker-none")
+    end
+  end
+  blockerName = dom.a {
+    class = "tl-attr-value tl-blocker",
+    onclick = function(e)
+      e.preventDefault()
+      if blocker then tl.closePopover(); editor.navigate(blocker) end
+    end,
+    "nothing",
+  }
+  showBlocker(blocker, blocker and tl.titleOf(blocker))
   local function chooseBlocker(e)
     e.preventDefault()
-    local rows = {}
-    for _, t in ipairs(tl.sources(nil)) do
-      if t.page ~= page and not tl.isClosedState(t.state) then
-        table.insert(rows, { name = tl.plainText(t.name), description = t.page, page = t.page })
-      end
-    end
-    table.sort(rows, function(a, b) return a.name < b.name end)
+    local rows = openTaskRows(page)
     -- the picker is outside the panel; keep the panel open while it shows
     tl.picking = true
-    local choice = view.pick {
-      title = "Blocked by which task?",
-      source = function() return rows end,
-      presentation = { row = { primary = "name", description = "description" } },
-    }
+    local choice = pick("Blocked by which task?", rows)
     -- closing the picker refocuses and scrolls the editor a moment later;
     -- keep the panel open through that too
     js.window.setTimeout(function() tl.picking = false end, 400)
     if not choice then return end
-    blockerName.textContent = choice.name
+    showBlocker(choice.page, choice.name)
     changed("blockedBy", "[[" .. choice.page .. "]]")
   end
   -- a div, not a label: a click on a label's text would press its first button
@@ -744,7 +833,7 @@ local function attrForm(page, attrs, subs, onChange)
       title = "Clear blocked by",
       onclick = function(e)
         e.preventDefault()
-        blockerName.textContent = "nothing"
+        showBlocker(nil)
         changed("blockedBy", nil)
       end,
       "×",
@@ -826,38 +915,12 @@ local function subtasksByPage()
   return by
 end
 
--- the task page's prose: everything after its frontmatter and leading task list
-local function notes(page)
-  local text = space.readPage(page) or ""
-  text = string.gsub(text, "^%-%-%-\n.-\n%-%-%-\n", "", 1)
-  local out, inList = {}, true
-  for _, line in ipairs(splitLines(text)) do
-    if not (inList and (string.match(line, "^%s*[-*] ") or string.match(line, "^%s+%S"))) then
-      inList = false
-      table.insert(out, line)
-    end
-  end
-  return (string.gsub(table.concat(out, "\n"), "^%s+", ""))
-end
-
--- what an expanded card shows: subtasks (drawn by SilverBullet, so their
--- checkboxes work) and the page's notes
-local function cardBody(t, subs)
-  local parts = {}
-  for _, s in ipairs(subs or {}) do table.insert(parts, templates.taskItem(s)) end
-  local body = table.concat(parts, "")
-  local prose = notes(t.page)
-  if prose ~= "" then body = body .. "\n" .. prose end
-  if body == "" then return "_No notes yet._" end
-  return body
-end
-
 -- The chips under a card's title: project, dates, progress, blocked by.
 local function cardChips(t, now, subs)
   local chips = {}
   local proj = projectOf(t)
   if proj then
-    table.insert(chips, dom.span { class = "tl-chip", basename(proj) })
+    table.insert(chips, dom.span { class = "tl-chip", title = proj, basename(proj) })
   end
   for _, c in ipairs(dateChips(t, now)) do table.insert(chips, c) end
   local pct = taskProgress(t.progress, subs)
@@ -867,9 +930,10 @@ local function cardChips(t, now, subs)
   return chips
 end
 
--- A board card for source task `t`, with its subtasks `subs`. The body,
--- which reads the task page, is built the first time the card opens, so a
--- board with many cards draws without reading every task page.
+-- A board card for source task `t`, with its subtasks `subs`. Open, it shows
+-- the task's dates, blocker and progress, and a button to the task page; the
+-- task's notes and subtasks stay on that page. The form is built the first
+-- time the card opens, so drawing a board reads no task page.
 local function card(t, now, subs)
   local chips = cardChips(t, now, subs)
   local page = t.page
@@ -894,7 +958,6 @@ local function card(t, now, subs)
         tl.refreshCard(page)
         tl.refreshStates()
       end))
-      slot.appendChild(dom.div { cardBody(t, subs) })
     end,
     ondragstart = function(e)
       e.dataTransfer.setData("text/plain", page)
@@ -907,7 +970,7 @@ local function card(t, now, subs)
     dom.summary {
       class = "tl-card-head",
       dom.span { class = "tl-icon", ["data-tl-state"] = shownState(t.state) },
-      dom.span { class = "tl-title", title },
+      dom.span { class = "tl-title", title = title, title },
       dom.span { class = "tl-chips", table.unpack(chips) },
     },
     dom.div {
@@ -915,7 +978,7 @@ local function card(t, now, subs)
       dom.div { class = "tl-card-notes" },
       dom.div {
         class = "tl-actions",
-        dom.button { class = "tl-button", onclick = function() editor.navigate(page) end, "Open task page" },
+        dom.button { class = "tl-button", onclick = function() editor.navigate(page) end, "View full task" },
         dom.button { class = "tl-button tl-delete", onclick = function() tl.deleteTaskPage(page) end, "Delete" },
       },
     },
@@ -2046,6 +2109,75 @@ function tl.resetFocusFilter(el)
   tl.applyFocusFilter(root, false)
 end
 
+-- Throughline: Filter Focus, the filter bar from the keyboard. Pick a Focus
+-- list on screen, a filter, then one of that dropdown's own options; repeat
+-- until Escape. The values and the remembered filter are the widget's own.
+local FILTER_NAMES = { project = "Project", state = "State", when = "When", tag = "Tag", source = "Pages" }
+
+local function focusRoot(key)
+  local roots = js.window.document.querySelectorAll("#sb-main .tl-focus")
+  for i = 0, roots.length - 1 do
+    local r = roots.item(i)
+    if r.getAttribute("data-key") == key then return r end
+  end
+end
+
+function tl.filterFocus()
+  local roots = js.window.document.querySelectorAll("#sb-main .tl-focus")
+  if roots.length == 0 then
+    editor.flashNotification("No Focus list on screen: scroll it into view first", "error")
+    return
+  end
+  local key = roots.item(0).getAttribute("data-key")
+  if roots.length > 1 then
+    local rows = {}
+    for i = 0, roots.length - 1 do
+      local k = roots.item(i).getAttribute("data-key")
+      table.insert(rows, { name = "Focus list " .. (i + 1), description = k, key = k })
+    end
+    local c = pick("Which Focus list?", rows)
+    if not c then return end
+    key = c.key
+  end
+  while true do
+    -- the widget may have redrawn since the last round
+    local root = focusRoot(key)
+    if not root then return end
+    local rows = {}
+    local selects = root.querySelectorAll(".tl-filter")
+    for i = 0, selects.length - 1 do
+      local s = selects.item(i)
+      local k = s.getAttribute("data-key")
+      table.insert(rows, { name = FILTER_NAMES[k] or k, description = s.options.item(s.selectedIndex).textContent, key = k })
+    end
+    table.insert(rows, { name = "Reset", description = "back to this list's starting filter", key = "" })
+    local f = pick("Filter Focus by (Escape when done)", rows)
+    if not f then return end
+    if f.key == "" then
+      tl.resetFocusFilter(root)
+    else
+      local s = root.querySelector('.tl-filter[data-key="' .. f.key .. '"]')
+      local opts = {}
+      for i = 0, s.options.length - 1 do
+        local o = s.options.item(i)
+        local group = o.parentElement and o.parentElement.tagName == "OPTGROUP" and o.parentElement.getAttribute("label") or nil
+        table.insert(opts, {
+          name = o.textContent,
+          description = (i == s.selectedIndex) and "current" or group,
+          value = o.value,
+        })
+      end
+      local v = pick(f.name, opts)
+      if v then
+        s.value = v.value
+        tl.applyFocusFilter(root, true)
+      end
+    end
+  end
+end
+
+command.define { name = "Throughline: Filter Focus", run = function() throughline.filterFocus() end }
+
 -- One filter dropdown. `options` holds { value, label } entries or
 -- { group, options } groups; `value` is the current choice.
 local function filterSelect(key, allLabel, options, value)
@@ -2096,7 +2228,7 @@ local function focusRow(t, now, ends, folder, sourceOf)
   local title = t._title
   local meta = {}
   if t._project then
-    table.insert(meta, dom.span { class = "tl-chip tl-pchip", dom.span { class = "tl-pdot" }, basename(t._project) })
+    table.insert(meta, dom.span { class = "tl-chip tl-pchip", title = t._project, dom.span { class = "tl-pdot" }, basename(t._project) })
   end
   -- a task page's own task needs no "where"; any other task names its page
   if not isSource then
@@ -2459,7 +2591,7 @@ function tl.openTaskPopover(page, anchor)
         class = "tl-pop-title",
         href = "/" .. page,
         onclick = function(e) e.preventDefault(); tl.closePopover(); editor.navigate(page) end,
-        trim(anchor.textContent or page),
+        tl.titleOf(page),
       },
     },
     dom.div { class = "tl-pop-states", table.unpack(buttons) },
@@ -2491,13 +2623,19 @@ function tl.openTaskPopover(page, anchor)
 end
 
 -- The projection whose icon (the first ~1em of the link) or due date (drawn
--- after it) is under the pointer of event `e`, or nil.
+-- after it) is under the pointer of event `e`, or nil. A long link wraps, as
+-- on a task page's first line, so the icon is measured on the link's first
+-- line box and the date on its last.
 local function projectionHit(e)
   local a = e.target.closest and e.target.closest("a.sb-wiki-link")
   if not a or not a.getAttribute("data-tl-state") then return nil end
-  local r = a.getBoundingClientRect()
-  local onIcon = e.clientX - r.left <= r.height * 1.1
-  local onDue = a.getAttribute("data-tl-due") and e.clientX > r.right - 6 * r.height
+  local rs = a.getClientRects()
+  if rs.length == 0 then return nil end
+  local first, last = rs.item(0), rs.item(rs.length - 1)
+  local onIcon = e.clientY >= first.top and e.clientY <= first.bottom
+    and e.clientX - first.left <= first.height * 1.1
+  local onDue = a.getAttribute("data-tl-due") and e.clientY >= last.top and e.clientY <= last.bottom
+    and e.clientX > last.right - 6 * last.height
   if onIcon or onDue then return a end
 end
 
@@ -2521,6 +2659,14 @@ function tl.onLinkClick(e)
   if tl.swallowClick then
     tl.swallowClick = false
     e.preventDefault()
+    e.stopPropagation()
+    return
+  end
+  -- a click on a task state in the editor text (not in a widget) only places
+  -- the cursor (that happened on mousedown): SilverBullet would cycle the
+  -- state, which gets in the way of editing it as text
+  local st = e.target.closest and e.target.closest("#sb-main .cm-line [data-task-state]")
+  if st and not st.closest('[contenteditable="false"]') then
     e.stopPropagation()
     return
   end
@@ -2568,6 +2714,25 @@ if main and root.getAttribute("data-tl-watch") ~= "1" then
   local observer = js.new(js.window.MutationObserver, function() throughline.onEditorChange() end)
   observer.observe(main, js.tojs({ childList = true, subtree = true }))
 end
+
+-- The bar at the top of a task page: an Edit task button that opens the same
+-- panel as a projection's icon. The task line itself stays plain text.
+event.listen {
+  name = "hooks:renderTopWidgets",
+  run = function()
+    local page = editor.getCurrentPage()
+    if not startsWith(page, tl.taskFolder()) or not tl.stateOf(page) then return nil end
+    return widget.html(dom.div {
+      class = "tl-taskbar",
+      dom.button {
+        class = "tl-button",
+        title = "Edit this task's state, dates, blocker and progress",
+        onclick = function(e) tl.openTaskPopover(page, e.target) end,
+        "Edit task",
+      },
+    })
+  end,
+}
 
 -- On project pages the board replaces SilverBullet's Linked Tasks and Linked
 -- Mentions panels: the stylesheet hides them under body.tl-project.
@@ -2706,9 +2871,17 @@ function tl.makeTaskPage()
   local folder = tl.taskFolder()
   local first = b.lines[1]
   local alias = tl.plainText(string.gsub(first, "^[-*] %[[^%]]*%] ", ""))
-  local slug = editor.prompt("Task page name (" .. folder .. "…)", tl.slugFor(alias))
-  if not slug or trim(slug) == "" then return end
-  local target = folder .. trim(slug)
+  if trim(alias) == "" then
+    editor.flashNotification("Give the task some text first", "error")
+    return
+  end
+  -- the field starts empty: Enter takes the suggestion, typing replaces it
+  local suggested = tl.slugFor(alias)
+  local slug = editor.prompt("Task page name (Enter for " .. folder .. suggested .. ")", "")
+  if slug == nil then return end
+  slug = trim(slug)
+  if slug == "" then slug = suggested end
+  local target = folder .. slug
   if pageExists(target) then
     editor.flashNotification(target .. " already exists", "error")
     return
@@ -2741,19 +2914,123 @@ function tl.makeTaskPage()
   editor.flashNotification((promoted and "Promoted to " or "Created ") .. target)
 end
 
+-- the first link into the task folder on line `text`, or nil
+local function taskLinkOnLine(text)
+  return string.match(text or "", "%[%[(" .. escapePattern(tl.taskFolder()) .. "[^%]|]+)")
+end
+
 -- the task page a delete acts on: the open page if it is one, otherwise the
 -- task page linked from the line under the cursor
 local function taskPageAtCursor()
-  local folder = tl.taskFolder()
   local page = editor.getCurrentPage()
-  if startsWith(page, folder) then return page end
+  if startsWith(page, tl.taskFolder()) then return page end
   local line = editor.getCurrentLine()
-  return string.match(line and line.text or "", "%[%[(" .. escapePattern(folder) .. "[^%]|]+)")
+  return taskLinkOnLine(line and line.text)
+end
+
+-- Throughline: Open task. Open the task linked from the cursor line (a
+-- projection, a blockedBy, ...) with the cursor inside its state brackets,
+-- so the keyboard edits the task as text. Alt+Left comes back.
+function tl.openTaskAtCursor()
+  local line = editor.getCurrentLine()
+  local target = taskLinkOnLine(line and line.text)
+  if not target then
+    editor.flashNotification("No task link on this line", "error")
+    return
+  end
+  if not pageExists(target) then
+    editor.flashNotification("No task page " .. target, "error")
+    return
+  end
+  local s = taskLineIn(tl.read(target) or "")
+  -- s is the "-" of "- [": two characters on is just inside the bracket
+  editor.navigate(s and (target .. "@" .. (s + 2)) or target)
+end
+
+-- The subtasks of the task on task page text `text`: each task line nested
+-- directly under it, with everything nested below that line, unindented.
+local function subtaskBlocks(text)
+  local ls = splitLines(text)
+  local s
+  for i, l in ipairs(ls) do
+    if string.match(l, "^[-*] %[") then s = i; break end
+  end
+  if not s then return {} end
+  local blocks, cur, childIndent = {}, nil, nil
+  for i = s + 1, #ls do
+    local l = ls[i]
+    local ind = indentOf(l)
+    if string.match(l, "^%s*$") or ind == 0 then break end
+    childIndent = childIndent or ind
+    if ind <= childIndent then
+      childIndent = ind
+      cur = nil
+      if string.match(l, "^%s*[-*] %[[^%]]*%] ") then
+        cur = { lines = {} }
+        table.insert(blocks, cur)
+      end
+    end
+    if cur then table.insert(cur.lines, string.sub(l, childIndent + 1)) end
+  end
+  for _, b in ipairs(blocks) do
+    b.title = tl.plainText(string.gsub(b.lines[1], "^[-*] %[[^%]]*%] ", ""))
+  end
+  return blocks
+end
+
+-- Make each subtask block a task page of its own, linked to `project` and
+-- listed on the project page, as Make task page would.
+local function promoteSubtasks(blocks, project)
+  local folder = tl.taskFolder()
+  local projections = {}
+  for _, b in ipairs(blocks) do
+    local lines = { table.unpack(b.lines) }
+    if project and not string.find(lines[1], "[[" .. project .. "]]", 1, true) then
+      lines[1] = lines[1] .. " [[" .. project .. "]]"
+    end
+    local target = folder .. tl.slugFor(b.title)
+    space.writePage(target, TASK_PAGE_FRONTMATTER .. table.concat(lines, "\n") .. "\n")
+    tl.noteState(target, string.match(lines[1], "^[-*] %[([^%]]*)%]"))
+    table.insert(projections, "- [[" .. target .. "|" .. b.title .. "]]")
+  end
+  if project and #projections > 0 and pageExists(project) then
+    local ls = splitLines(tl.read(project))
+    for _, pr in ipairs(projections) do appendToList(ls, pr) end
+    tl.write(project, table.concat(ls, "\n") .. "\n")
+  end
+end
+
+-- What to do with a task page's subtasks when it is deleted, asked in one
+-- picker that also says which projections go: "keep" makes them task pages
+-- of their own, "delete" deletes them too, nil cancels. The choice is then
+-- confirmed once more, with the subtasks listed.
+local function askAboutSubtasks(target, blocks, project, projections)
+  local n = #blocks
+  local name = tl.titleOf(target)
+  local title = "Delete \"" .. name .. "\"? It has " .. n .. " subtask(s)"
+  local choice = pick(title, {
+    { name = "Delete it, and make its " .. n .. " subtask(s) tasks of their own", value = "keep" },
+    { name = "Delete it and its " .. n .. " subtask(s)", value = "delete" },
+  })
+  if not choice then return nil end
+  local list = {}
+  for _, b in ipairs(blocks) do table.insert(list, "• " .. b.title) end
+  local msg
+  if choice.value == "keep" then
+    msg = "Delete \"" .. name .. "\" and make these " .. n .. " subtask(s) tasks of their own" ..
+      (project and (", in " .. basename(project)) or "") .. "?\n\n" .. table.concat(list, "\n")
+  else
+    msg = "Delete \"" .. name .. "\" and these " .. n .. " subtask(s) for good?\n\n" .. table.concat(list, "\n")
+  end
+  if projections ~= "" then msg = msg .. "\n\nThis also removes " .. projections end
+  if not editor.confirm(msg, { destructive = true }) then return nil end
+  return choice.value
 end
 
 -- Delete a task page and every projection of it, after confirmation. A
 -- projection here is a list item that starts with a link to the page; other
--- links to it stay, as links to a missing page.
+-- links to it stay, as links to a missing page. When the task has subtasks,
+-- the user chooses whether they become tasks of their own or go too.
 function tl.deleteTaskPage(target)
   target = target or taskPageAtCursor()
   if not target or not pageExists(target) then
@@ -2775,11 +3052,24 @@ function tl.deleteTaskPage(target)
   end
   local where = {}
   for _, p in ipairs(pages) do table.insert(where, p.page .. " (" .. p.n .. ")") end
-  local msg = "Delete " .. target .. "?"
-  if count > 0 then
-    msg = msg .. "\n\nThis also removes " .. count .. " projection(s) on: " .. table.concat(where, ", ")
+  local projections = count > 0 and (count .. " projection(s) on: " .. table.concat(where, ", ")) or ""
+  -- with subtasks: one picker for what happens to them, then a confirmation;
+  -- without: a single confirmation
+  local pageText = tl.read(target) or ""
+  local blocks = subtaskBlocks(pageText)
+  local keep = false
+  local project
+  if #blocks > 0 then
+    local s, e = taskLineIn(pageText)
+    project = s and string.match(string.sub(pageText, s, e), projectLinkPattern()) or nil
+    local what = askAboutSubtasks(target, blocks, project, projections)
+    if not what then return end
+    keep = what == "keep"
+  else
+    local msg = "Delete \"" .. tl.titleOf(target) .. "\"?"
+    if projections ~= "" then msg = msg .. "\n\nThis also removes " .. projections end
+    if not editor.confirm(msg, { destructive = true }) then return end
   end
-  if not editor.confirm(msg) then return end
   for _, p in ipairs(pages) do
     local text = string.gsub("\n" .. tl.read(p.page), pattern, "")
     tl.write(p.page, string.sub(text, 2))
@@ -2792,25 +3082,115 @@ function tl.deleteTaskPage(target)
     return
   end
   tl.noteState(target, nil)
-  editor.flashNotification("Deleted " .. target)
+  if keep then promoteSubtasks(blocks, project) end
+  editor.flashNotification("Deleted " .. target .. (keep and (", kept " .. #blocks .. " subtask(s) as tasks") or ""))
 end
 
 command.define { name = "Throughline: Make task page", run = function() throughline.makeTaskPage() end }
 command.define { name = "Throughline: Promote subtask", run = function() throughline.makeTaskPage() end }
 command.define { name = "Throughline: Delete task page", run = function() throughline.deleteTaskPage() end }
 
--- /task: on a task, make its task page; elsewhere, write a new task first
+command.define { name = "Throughline: Open task", key = "Mod-. o", run = function() throughline.openTaskAtCursor() end }
+
+-- /task, on any line: an empty line, "- ", "- [ ] text", "- [DOING] text" or
+-- plain text. The line becomes a task (asking for its text when it has none)
+-- and then gets its task page.
 slashCommand.define {
   name = "task",
-  description = "Make a task page from this task, or start a new one",
+  description = "Make a task page from this line",
   run = function()
     local line = editor.getCurrentLine()
-    if not (line and string.match(line.text or "", "^%s*[-*] %[[^%]]*%] ")) then
-      local what = editor.prompt("New task", "")
-      if not what or trim(what) == "" then return end
-      editor.insertAtCursor("- [ ] " .. trim(what))
+    local text = line and line.text or ""
+    if taskLinkOnLine(text) and string.match(text, "^%s*[-*] %[%[") then
+      editor.flashNotification("Already a task page", "error")
+      return
     end
+    local indent, rest = string.match(text, "^(%s*)(.-)%s*$")
+    local state, body = string.match(rest, "^[-*] %[([^%]%[]*)%]%s*(.*)$")
+    if not state then
+      state = " "
+      body = string.match(rest, "^[-*]%s+(.*)$") or ((rest == "-" or rest == "*") and "" or rest)
+    end
+    body = trim(body)
+    if body == "" then
+      body = editor.prompt("New task", "")
+      if not body or trim(body) == "" then return end
+      body = trim(body)
+    end
+    local task = indent .. "- [" .. state .. "] " .. body
+    editor.replaceRange(line.from, line.to, task)
+    editor.moveCursor(line.from + #task)
     throughline.makeTaskPage()
+  end,
+}
+
+-- The snippets: /due, /scheduled, /progress and /blocked write the same
+-- [key: value] text you could type, for the names and formats that are hard
+-- to remember. They act on the task line under the cursor.
+
+-- the cursor line if it is a task line, else nil after saying why
+local function taskLineAtCursor()
+  local line = editor.getCurrentLine()
+  local text = line and line.text or ""
+  if string.match(text, "^%s*[-*] %[%[") and taskLinkOnLine(text) then
+    editor.flashNotification("This is a link to a task: open it first (Ctrl+. o)", "error")
+    return nil
+  end
+  if not string.match(text, "^%s*[-*] %[[^%]%[]*%]") then
+    editor.flashNotification("Put the cursor on a task line", "error")
+    return nil
+  end
+  return line
+end
+
+-- Write [key: value] at the end of the task line, or over the one there.
+-- With `keep`, a value already there stays, and the value ends up selected
+-- so typing replaces it; otherwise the cursor goes after the attribute.
+local function attrSnippet(key, value, keep)
+  local line = taskLineAtCursor()
+  if not line then return end
+  local text = line.text
+  local s, e = string.find(text, "%[" .. key .. ":%s*%[%[[^%]]*%]%]%]")
+  if not s then s, e = string.find(text, "%[" .. key .. ":[^%]]*%]") end
+  local from, to, piece
+  if s then
+    local old = string.match(string.sub(text, s, e), "^%[[^:]+:%s*(.-)%s*%]$")
+    if keep and old and old ~= "" then value = old end
+    from, to = line.from + s - 1, line.from + e
+    piece = "[" .. key .. ": " .. value .. "]"
+  else
+    from, to = line.from + #(string.gsub(text, "%s+$", "")), line.to
+    piece = " [" .. key .. ": " .. value .. "]"
+  end
+  editor.replaceRange(from, to, piece)
+  local v = from + #piece - 1 - #value
+  if keep then editor.setSelection(v, v + #value) else editor.moveCursor(from + #piece) end
+end
+
+slashCommand.define {
+  name = "due",
+  description = "Due date on this task: [due: today]",
+  run = function() attrSnippet("due", today(), true) end,
+}
+slashCommand.define {
+  name = "scheduled",
+  description = "Scheduled date on this task: [scheduled: today]",
+  run = function() attrSnippet("scheduled", today(), true) end,
+}
+slashCommand.define {
+  name = "progress",
+  description = "Progress on this task, 0 to 100: [progress: ]",
+  run = function() attrSnippet("progress", "", true) end,
+}
+slashCommand.define {
+  name = "blocked",
+  description = "Blocked by another task, chosen by its title",
+  run = function()
+    if not taskLineAtCursor() then return end
+    local page = editor.getCurrentPage()
+    local choice = pick("Blocked by which task?", openTaskRows(page))
+    if not choice then return end
+    attrSnippet("blockedBy", "[[" .. choice.page .. "]]", false)
   end,
 }
 ```
@@ -2826,6 +3206,8 @@ slashCommand.define {
    Project icons     Linear's project status shapes
    Widget chrome     chips, buttons, toolbars shared by all widgets
    Board, Projects overview, Focus list
+   Task popover      the editing panel and its form
+   Overflow          how long text is shortened or wrapped, everywhere
    Theme: native     overrides for the default theme
 
    Everything above "Theme: native" is the lineish theme. native keeps its
@@ -3034,6 +3416,33 @@ html[data-theme="dark"] {
   opacity: 0.75;
 }
 
+/* Everything is plain text. On the line that holds the cursor (SilverBullet
+   marks it with .sb-li-cursor), the state shows as its text again, brackets
+   and all, so it can be edited like any other word. */
+.cm-line:has(.sb-li-cursor) :is([data-task-state="DOING"], [data-task-state="WAITING"], [data-task-state="BLOCKED"],
+    [data-task-state="CANCELLED"], [data-task-state="BACKLOG"]) {
+  display: inline;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  color: inherit !important;
+}
+.cm-line:has(.sb-li-cursor) :is([data-task-state="DOING"], [data-task-state="WAITING"], [data-task-state="BLOCKED"],
+    [data-task-state="CANCELLED"], [data-task-state="BACKLOG"]) * {
+  color: inherit !important;
+}
+.cm-line:has(.sb-li-cursor) :is([data-task-state="DOING"], [data-task-state="WAITING"], [data-task-state="BLOCKED"],
+    [data-task-state="CANCELLED"], [data-task-state="BACKLOG"])::before {
+  content: none;
+}
+.cm-line:has(.sb-li-cursor) .sb-atom { display: inline !important; }
+
+/* SilverBullet's own state menu (the ▾ after a state) is not used, and a
+   click on a state places the cursor instead of cycling it (tl.onLinkClick):
+   type the state, or use the task page's Edit task button or the panel. */
+.sb-task-dropdown { display: none !important; }
+#sb-main .cm-line [data-task-state] { cursor: text; }
+
 /* ---- Project status icons (Linear's shapes) ----------------------------- */
 .tl-picon {
   display: inline-block;
@@ -3212,11 +3621,6 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   border-top: 1px solid var(--tl-line);
   padding: 8px 12px 10px;
 }
-/* projected subtasks carry a link to their source position; noise in a card */
-.tl-card-body a.wiki-link[data-ref*="@"] { display: none; }
-.tl-card-body h2 { font-size: 1em; margin: 0.5em 0 0.2em; }
-.tl-card-body ul { padding-left: 1.2em; margin: 0.2em 0; }
-.tl-card-body p { display: block; margin: 0.3em 0; }
 
 /* Hide backlog, in the To do column's header on every board. While backlog
    cards are hidden it reads "Show backlog (n)". */
@@ -3642,7 +4046,8 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
 }
 .tl-attr-clear:hover { color: var(--tl-red); }
 .tl-card-notes .tl-attrs { padding-bottom: 8px; border-bottom: 1px solid var(--tl-line); }
-.tl-blocker { color: var(--tl-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tl-blocker { color: var(--tl-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tl-blocker.tl-blocker-none { color: var(--tl-muted); cursor: default; text-decoration: none; }
 .tl-attr-pick {
   font: inherit;
   font-size: 12px;
@@ -3656,9 +4061,88 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
 .tl-unblocked { color: var(--tl-faint); text-decoration: line-through; }
 .tl-tprog { gap: 4px; }
 
+/* the Edit task bar at the top of a task page */
+.tl-taskbar { display: flex; gap: 6px; padding: 2px 0 6px; font-family: var(--tl-font); }
+.tl-taskbar .tl-button { font-family: var(--tl-font) !important; }
+
 /* on project pages the board replaces SilverBullet's own task panels */
 body.tl-project .sb-page-widget[data-view="std.linkedTasks"],
 body.tl-project .sb-page-widget[data-view="std.linkedMentions"] { display: none; }
+
+/* ---- Overflow -------------------------------------------------------------
+   Nothing may push out of its box. Two rules:
+   - In collapsed views (a card's front, a Focus row, chips, column and section
+     heads) one-line text ends in "…"; its title attribute holds the full text.
+   - In expanded views (an open card, an open project card, the task panel)
+     text wraps, so everything is visible. Long words break anywhere. */
+:is(.tl-board, .tl-projects, .tl-focus, .tl-pop) { overflow-wrap: anywhere; text-indent: 0; }
+/* buttons under a card or a panel wrap onto a second line when narrow */
+:is(.tl-actions, .tl-pop-foot, .tl-ptoolbar, .tl-ftoolbar) { flex-wrap: wrap; }
+:is(.tl-board, .tl-projects, .tl-focus, .tl-pop) :is(img, video, table, pre) { max-width: 100%; }
+
+/* chips: one line, shortened to fit */
+.tl-chip { max-width: 100%; min-width: 0; overflow: hidden; }
+.tl-chip > :not(.tl-pdot, .tl-ring, .tl-health-dot) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-chips, .tl-pcard-line, .tl-pcard-counts { min-width: 0; max-width: 100%; }
+
+/* card fronts: titles wrap, the grid never grows past the card */
+.tl-card-head { grid-template-columns: 1.05em minmax(0, 1fr); }
+.tl-card, .tl-col, .tl-cards, .tl-pcard, .tl-pcard-head, .tl-pcard-top { min-width: 0; }
+.tl-col-head, .tl-psection-head, .tl-fsection-head { min-width: 0; }
+:is(.tl-col-title, .tl-psection-title, .tl-fsection-title) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-bl-toggle, .tl-count { flex: none; white-space: nowrap; }
+
+/* Focus rows: the title gives way first, then the chips */
+.tl-row { min-width: 0; }
+.tl-row-meta { flex: 0 1 auto; min-width: 0; max-width: 55%; overflow: hidden; }
+.tl-row-meta .tl-chip { flex: 0 1 auto; }
+/* dates are short and matter most: they keep their size; project, page and
+   blocked-by chips give way */
+.tl-row-meta .tl-chip:not(.tl-pchip, .tl-src, .tl-blocked) { flex: none; }
+
+/* task titles: at most two lines on a closed card (the title attribute holds
+   the rest); in full, wrapping, once the card is open and in the task panel */
+.tl-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.tl-card[open] .tl-title {
+  display: inline;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  overflow: visible;
+}
+
+/* the blocking task in an open card or the task panel: at most three lines,
+   the rest hidden; the link's title holds the full name */
+:is(.tl-card-body, .tl-pop) .tl-blocker {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  white-space: normal;
+}
+
+/* expanded views show everything else: no shortening inside them */
+:is(.tl-card-body, .tl-pcard-body, .tl-pop) :is(.tl-stat-value, .tl-update-text, .tl-attr-value:not(.tl-blocker)) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.tl-stats { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); }
+.tl-attr > * { min-width: 0; }
+.tl-date { max-width: 100%; }
+.tl-pop { max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; }
+.tl-pop-states { min-width: 0; }
 
 /* ---- Theme: native -------------------------------------------------------
    Everything above is the lineish theme. native keeps the same layout but
@@ -3785,6 +4269,8 @@ html[data-tl-theme="native"] .tl-fsection {
   overflow: visible;
   margin-bottom: 14px;
 }
+/* room for the section arrow, which would otherwise poke out on the left */
+html[data-tl-theme="native"] .tl-fsection-head { padding-left: 6px; }
 html[data-tl-theme="native"] .tl-fsection[open] .tl-fsection-head { border-bottom: 1px dotted var(--tl-dots); }
 html[data-tl-theme="native"] .tl-row {
   padding: 0 4px;

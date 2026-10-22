@@ -1,10 +1,44 @@
 # Changelog
 
-Throughline is alpha software, so versions are numbered 0.0.x. The first two
-were called 0.1 and 0.2 while they were being written; they are 0.0.1 and
-0.0.2 here and in the release tags.
+Throughline is alpha software. Versions were numbered 0.0.x up to 0.0.4;
+0.1.0 follows. The first two were called 0.1 and 0.2 while they were being
+written; they are 0.0.1 and 0.0.2 here and in the release tags, and are not
+the same as 0.1.0.
 
 Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
+
+## 0.1.0 (2026-10-22)
+
+- Long text never spills out of a card, row, column, panel or chip. Collapsed
+  views shorten it with "…" (hover for the full text); expanded cards, project
+  cards and the task panel wrap it, so it is all visible there.
+- Card buttons and toolbars wrap onto a second line on narrow screens.
+- README: full installation, updating, manual install and removal steps.
+- The library page explains how overview, projects and tasks fit together,
+  and has a quick tutorial.
+- An open card shows the task's dates, blocker and progress, and a View full
+  task button; the notes and subtasks stay on the task page. A closed card's
+  title shows at most two lines; an open card shows it in full.
+- The blocking task's name is a link to it in an open card and the task panel,
+  at most three lines long.
+- Deleting a task with subtasks, from a board card, the task panel or the
+  command alike, first asks whether its subtasks become tasks of their own
+  (same project, listed on its page) or are deleted too, then asks you to
+  confirm that choice. Without subtasks there is one confirmation.
+- A task page's first line is plain text again: on the line with the cursor
+  the state shows as `[BLOCKED]`, ready to edit. A click on a state places the
+  cursor instead of cycling it, and SilverBullet's ▾ state menu is gone.
+- An **Edit task** button above every task page opens the task's editing
+  panel.
+- A linked task on a task page's first line, such as its `blockedBy`, opens
+  the editing panel from its icon or date, as a projection does. Long links
+  that wrap work too.
+- Keyboard: `/task` works on any line, `/due`, `/scheduled`, `/progress` and
+  `/blocked` write attributes, Throughline: Open task (`Ctrl+.` `o`) opens the
+  linked task with the cursor in its state, and Throughline: Filter Focus sets
+  the Focus filters from the palette. See KEYBOARD.md.
+- The task page name field starts empty: Enter takes the suggested name.
+- The delete window wraps its warning about projections, and its Ok is red.
 
 ## 0.0.4 (2026-10-21)
 

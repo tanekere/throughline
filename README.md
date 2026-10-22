@@ -8,7 +8,7 @@ overview of all projects, and a list of what to do next.
 ![The projects overview](docs/projects.png)
 
 Throughline is alpha software. Everything described here works, but names,
-settings and page formats may still change between 0.0.x versions. The
+settings and page formats may still change between versions. The
 [changelog](CHANGELOG.md) says what changed.
 
 It needs SilverBullet 2.12 or later. It is one library page of Space Lua and
@@ -16,16 +16,22 @@ Space Style, with no plug and nothing to build.
 
 ## Install
 
-Run `Library: Install` and give it this address:
+You need SilverBullet 2.12 or later, and a space you can write to.
 
-```
-ghr:tanekere/throughline/Throughline.md
-```
+1. Open the command palette (Ctrl+/ or Cmd+/) and run **Library: Install**.
+2. Paste this address and press Enter:
+
+   ```
+   ghr:tanekere/throughline/Throughline.md
+   ```
+
+3. SilverBullet creates the page `Library/tanekere/Throughline`. Run
+   **System: Reload** (or reload the browser tab) so the library loads.
+4. Check it worked: the command palette now lists commands starting with
+   `Throughline:`, and Configuration: Open has a Throughline section.
 
 `ghr:` is SilverBullet's address for GitHub releases. It installs
 `Throughline.md` from the latest full release and skips pre-releases.
-SilverBullet never updates a library by itself; Configuration → Libraries →
-Update all fetches the newest release when you choose to.
 
 Then put the two overview widgets on a page, your index for example:
 
@@ -35,19 +41,55 @@ ${throughline.projects()}
 ${throughline.focus()}
 ```
 
+### Updating
+
+SilverBullet never updates a library by itself. To get a newer release, run
+Configuration: Open, go to Libraries and press **Update all** (or run
+**Library: Update All**), then reload. Only full releases are installed.
+
+If you had copied Throughline into your space by hand, or installed it under a
+different page name, delete that older page under `Library/` after installing,
+so only one copy loads.
+
+### Installing by hand
+
+Download `Throughline.md` from the
+[latest release](https://github.com/tanekere/throughline/releases/latest), save
+it in your space as `Library/tanekere/Throughline.md`, and reload. A copy made
+this way still updates through Update all, because the page carries its
+`ghr:` address.
+
+### Removing
+
+Run **Library: Manager** and remove Throughline, or delete the page
+`Library/tanekere/Throughline`, then reload. Your tasks, projects and task pages
+stay as they are: they are plain markdown. Settings you saved stay in `CONFIG`
+until you remove them.
+
 ## Getting started
+
+The library page itself has a quick tutorial: open
+`Library/tanekere/Throughline` in your space, or read it in
+[Throughline.md](Throughline.md#quick-tutorial). It walks through a main page
+with the overview, a project, its tasks and their dates. In short:
 
 1. Run `Throughline: New project` and call it "Website". You get
    `Projects/Website`, with a board, a `## Tasks` heading and a `## Updates`
    heading.
 2. Write tasks anywhere, as ordinary markdown, and link the project:
    `- [ ] write the about page [[Projects/Website]] [due: 2026-11-01]`.
-3. When a task needs room for notes, put the cursor on it and run
-   `Throughline: Make task page`, or type `/task`. The task moves to a page of
-   its own and a link to it takes its place.
+   `/due`, `/scheduled`, `/progress` and `/blocked` write those attributes
+   for you.
+3. **`/task` is the preferred way to create a task.** Type it on any line, empty
+   or not: the line becomes a task, the task moves to a page of its own, and a
+   link to it takes its place. The New task button on a board does the same
+   with the mouse.
 4. Open the project. Its tasks are on the board.
 5. Once a week or so, run `Throughline: Post update` to say how the project is
    going. The overview shows the latest health on the project's card.
+
+Working from the keyboard? [KEYBOARD.md](KEYBOARD.md) has every key, command
+and slash command, vim mode included.
 
 ## How it works
 
@@ -58,7 +100,9 @@ index.
 **A task page is a task with room.** When a task needs notes, data or
 subtasks, it gets a page in `Tasks/`. The first task on that page is the task;
 the rest of the page is its notebook. A task page belongs to the project its
-task links to.
+task links to. That first line is plain text: on the line with the cursor the
+state shows as `[BLOCKED]`, ready to edit. The **Edit task** button above the
+page opens the same editing panel as a projection's icon.
 
 **A projection is a link to a task page.** On every other page the task
 appears as a plain link, `- [[Tasks/rerun-load-test|rerun the load test]]`, drawn
@@ -91,8 +135,11 @@ page without `status:` counts as active.
 | `[x]` | ticked box | done | Done |
 | `[CANCELLED]` | no-entry sign | cancelled | Done |
 
-Click a state in the editor to cycle through them, as with any SilverBullet
-task. Throughline acts on the category, never on the state's name. A state you
+To change a state, type it: put the cursor inside the brackets, and
+SilverBullet lists the states as you type. A click on a state only places the
+cursor, and SilverBullet's own ▾ state menu is hidden, so neither gets in the
+way of editing. With the mouse, use a projection's icon or a task page's Edit
+task button. Throughline acts on the category, never on the state's name. A state you
 add, say `[REVIEW]` in the active category, shows up under Doing in the Focus
 list with no other setup. See [Settings](#settings).
 
@@ -105,8 +152,9 @@ ${throughline.board()}
 Put this on a project page. There is one column per open state, with Planned
 and Backlog sharing To do and Waiting and Blocked sharing On hold, and a folded
 Done column. Each card is one of the project's task pages. Expand a card to set
-its dates and progress, see its subtasks and notes, and tick subtasks right
-there.
+its dates, its blocker and its progress; View full task opens the task page with
+its notes and subtasks. A closed card's title shows at most two lines; open, the
+card shows it in full.
 
 ![A project board](docs/board.png)
 
@@ -221,9 +269,14 @@ ${throughline.focus { when = "week", source = "Journal" }}
 
 | Command | What it does |
 | --- | --- |
-| Throughline: Make task page, or `/task` | Moves the task under the cursor and its subtasks to a new task page, leaves a projection in their place, and adds the projection to the project's list |
+| `/task`, or Throughline: Make task page | Moves the task under the cursor and its subtasks to a new task page, leaves a projection in their place, and adds the projection to the project's list. `/task` works on any line: an empty one asks for the task's text, and plain text becomes a task first. The page name field starts empty; Enter takes the suggested name. It replaces SilverBullet's own `/task` |
+| Throughline: Open task (`Ctrl+.` `o`) | Opens the task linked from the cursor line (a projection, a `blockedBy`) with the cursor inside its state brackets |
+| `/due`, `/scheduled` | Writes `[due: <today>]` or `[scheduled: <today>]` on the task line with the date selected, so typing replaces it. A date already there stays and is selected |
+| `/progress` | Writes `[progress: ]` with the cursor where the number goes |
+| `/blocked` | Picks the blocking task by its title, among open tasks, and writes `[blockedBy: [[Tasks/…]]]` |
+| Throughline: Filter Focus | Sets a Focus list's filters from the keyboard: a filter, then one of its values, until Escape |
 | Throughline: Promote subtask | The same, for a subtask on a task page. The new page records `[partOf: [[Tasks/<parent>]]]` |
-| Throughline: Delete task page | Deletes the task page and every projection of it, after showing you where they are |
+| Throughline: Delete task page | Deletes the task page and every projection of it, after showing you where they are. If the task has subtasks, the first window asks whether they become tasks of their own (in the same project) or are deleted too, and a second confirms that choice. The Delete buttons on board cards and in the task panel do exactly the same |
 | Throughline: New project | Creates `Projects/<name>` with a board and the `## Tasks` and `## Updates` headings |
 | Throughline: Post update | Asks how the project is going and for a line of text, then adds a dated update |
 | Throughline: Set project status | Sets the open project's `status:`, or one you pick |
