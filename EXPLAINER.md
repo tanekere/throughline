@@ -80,7 +80,7 @@ Three functions build on the category and the label:
 
 When a card is dropped into a column, `tl.columnState` picks the state. A closed column gives `x`. Any other column gives the state marked `drop = true`, or else the column's first state.
 
-Everything stays plain text. On the line that holds the cursor, which SilverBullet marks with `.sb-li-cursor`, the stylesheet drops the icon and shows the state as its text again, brackets and all, so it can be selected and typed over like any word. SilverBullet's own state menu, the ▾ after a state, is hidden. SilverBullet also cycles a state on a click; [`tl.onLinkClick`](throughline.lua#L2570) stops that click in the capture phase, before the editor sees it, so a click only places the cursor (which happened on the press). Checkboxes, `[ ]` and `[x]`, still toggle on a click. To change a state you type it: inside the brackets SilverBullet's completion lists every state.
+Everything stays plain text. On the line that holds the cursor, which SilverBullet marks with `.sb-li-cursor`, the stylesheet drops the icon and shows the state as its text again, brackets and all, so it can be selected and typed over like any word. SilverBullet's own state menu, the ▾ after a state, is hidden. SilverBullet also cycles a state on a click; [`tl.onLinkClick`](throughline.lua#L2619) stops that click in the capture phase, before the editor sees it, so a click only places the cursor (which happened on the press). Checkboxes, `[ ]` and `[x]`, still toggle on a click. To change a state you type it: inside the brackets SilverBullet's completion lists every state.
 
 `shownState` turns a state into the name the stylesheet uses in `data-tl-state` attributes. It maps `" "` to `todo` and `x` or `X` to `done`. The State icons block in the stylesheet draws the icon in three places: SilverBullet's own task marks, the widgets, and projection links. Each default state has its own rule. A custom state has no icon. A projection shows its name as a small label, and a widget shows a plain ring.
 
@@ -97,9 +97,9 @@ Everything stays plain text. On the line that holds the cursor, which SilverBull
 | The board column of a state | [`tl.columnOf`](throughline.lua#L367) |
 | The state a dropped card takes | [`tl.columnState`](throughline.lua#L376) |
 | The name used in `data-tl-state` | [`shownState`](throughline.lua#L395) |
-| Icons for the states, in the stylesheet | [`State icons`](Throughline.md?plain=1#L3266) |
-| The state as text on the cursor line, no ▾ menu | [`Everything is plain text`](Throughline.md?plain=1#L3419) |
-| A click on a state places the cursor | [`tl.onLinkClick`](throughline.lua#L2570) |
+| Icons for the states, in the stylesheet | [`State icons`](Throughline.md?plain=1#L3315) |
+| The state as text on the cursor line, no ▾ menu | [`Everything is plain text`](Throughline.md?plain=1#L3468) |
+| A click on a state places the cursor | [`tl.onLinkClick`](throughline.lua#L2619) |
 
 ## Task pages
 
@@ -113,7 +113,7 @@ A task page is a page in the task folder, `Tasks/` by default. Its first top-lev
 
 [`tl.setTaskAttr`](throughline.lua#L560) sets one attribute, such as `[due: 2026-11-01]`, on the same task line: it replaces the value when the attribute is there, appends it at the end of the line when not, and removes it when the value is empty. [`tl.taskAttrs`](throughline.lua#L531) reads the attributes back from the line. Both find the line with [`taskLineIn`](throughline.lua#L502), which `tl.setTaskPageState` uses too.
 
-Above every task page sits an **Edit task** button. A listener on SilverBullet's [`hooks:renderTopWidgets`](throughline.lua#L2633) event returns it as a top widget, only for pages in the task folder that have a task. It opens the same panel as a projection's icon (see Projections), for the page's own task, so the first line can stay plain text while the mouse still has a form.
+Above every task page sits an **Edit task** button. A listener on SilverBullet's [`hooks:renderTopWidgets`](throughline.lua#L2682) event returns it as a top widget, only for pages in the task folder that have a task. It opens the same panel as a projection's icon (see Projections), for the page's own task, so the first line can stay plain text while the mouse still has a form.
 
 `tl.read` and `tl.write` choose the route for a page. For the page open in the editor, they read and set the editor's text. Other pages go through `space.readPage` and `space.writePage`. The code comment says that writing the open page behind the editor leaves a stale buffer, and that a later save writes over the change. For the open page, `tl.write` also skips the write when the text is already the same.
 
@@ -124,7 +124,7 @@ Above every task page sits an **Edit task** button. A listener on SilverBullet's
 | Finding the task line on a task page | [`taskLineIn`](throughline.lua#L502) |
 | Setting or removing one attribute | [`tl.setTaskAttr`](throughline.lua#L560) |
 | Reading the attributes | [`tl.taskAttrs`](throughline.lua#L531) |
-| The Edit task button above a task page | [`hooks:renderTopWidgets`](throughline.lua#L2633) |
+| The Edit task button above a task page | [`hooks:renderTopWidgets`](throughline.lua#L2682) |
 | Reading a page through the editor when it is open | [`tl.read`](throughline.lua#L416) |
 | Writing a page through the editor when it is open | [`tl.write`](throughline.lua#L421) |
 
@@ -138,17 +138,17 @@ A projection is a plain link to a task page, such as `- [[Tasks/rerun-load-test|
 
 ### How it works
 
-Drawing the icons. [`tl.markLinks`](throughline.lua#L2413) finds every wiki link in the editor's main area. For each one it asks [`tl.stateOf`](throughline.lua#L2372) for the state of the linked page, and [`tl.dueOf`](throughline.lua#L2401) for its due date. A task page's link gets `data-tl-state`, with the name from [`shownState`](throughline.lua#L395); the stylesheet draws the icon from that. It also gets `data-tl-due` with the short date, and `data-tl-late` when the date has passed and the task is still open; the stylesheet draws the date after the link. Links to other pages are left alone.
+Drawing the icons. [`tl.markLinks`](throughline.lua#L2478) finds every wiki link in the editor's main area. For each one it asks [`tl.stateOf`](throughline.lua#L2437) for the state of the linked page, and [`tl.dueOf`](throughline.lua#L2466) for its due date. A task page's link gets `data-tl-state`, with the name from [`shownState`](throughline.lua#L395); the stylesheet draws the icon from that. It also gets `data-tl-due` with the short date, and `data-tl-late` when the date has passed and the task is still open; the stylesheet draws the date after the link. Links to other pages are left alone.
 
-`tl.markLinks` runs whenever the editor adds elements: when a page opens, when lines scroll into view, when a widget draws. A watcher on the editor, [`tl.onEditorChange`](throughline.lua#L2614), queues it for the next animation frame, so icons appear about a tenth of a second after a page opens. The background tick runs it once a second as well.
+`tl.markLinks` runs whenever the editor adds elements: when a page opens, when lines scroll into view, when a widget draws. A watcher on the editor, [`tl.onEditorChange`](throughline.lua#L2663), queues it for the next animation frame, so icons appear about a tenth of a second after a page opens. The background tick runs it once a second as well.
 
-The state cache. [`tl.stateOf`](throughline.lua#L2372) builds a map from page name to state, and one from page name to due date, from [`tl.sources`](throughline.lua#L481). It keeps them in `tl.stateMap` and `tl.dueMap`. The tick clears the map every third second, so a change made by hand or on another device shows within a few seconds. A change made by Throughline itself shows at once: [`tl.noteState`](throughline.lua#L2407) puts the new state straight into the map, and records it in `tl.pending`. SilverBullet's index takes a moment to see a write, so until it does, `tl.pending` wins over the index (see [`pendingState`](throughline.lua#L467)). Without that, an icon would flip back to the old state for a few seconds after every change. Due dates get the same treatment through `tl.pendingDue`. A brand new task page, which the index does not know yet, is added to the map from `tl.pending` too.
+The state cache. [`tl.stateOf`](throughline.lua#L2437) builds a map from page name to state, and one from page name to due date, from [`tl.sources`](throughline.lua#L481). It keeps them in `tl.stateMap` and `tl.dueMap`. The tick clears the map every third second, so a change made by hand or on another device shows within a few seconds. A change made by Throughline itself shows at once: [`tl.noteState`](throughline.lua#L2472) puts the new state straight into the map, and records it in `tl.pending`. SilverBullet's index takes a moment to see a write, so until it does, `tl.pending` wins over the index (see [`pendingState`](throughline.lua#L467)). Without that, an icon would flip back to the old state for a few seconds after every change. Due dates get the same treatment through `tl.pendingDue`. A brand new task page, which the index does not know yet, is added to the map from `tl.pending` too.
 
-Clicks. Listeners for mouse presses and clicks cover the whole document, in the capture phase, so they run before SilverBullet does. The panel opens on the press, in [`tl.onLinkPress`](throughline.lua#L2560): once the editor has focus, a press on a line moves the cursor there and SilverBullet swaps the link for its raw markdown, so a click handler would miss it. The click that follows is swallowed by [`tl.onLinkClick`](throughline.lua#L2570) so the link does not navigate. A marker attribute on `<html>` stops a second registration, because the file runs again on every configuration reload. A press outside an open panel closes it. On a projection, a press within about one link height of the left edge counts as a press on the icon, and a press on the date at the right end counts too; [`projectionHit`](throughline.lua#L2541) decides. It measures the link's line boxes, not its bounding box: a long link wraps, as a `blockedBy` link on a task page's first line often does, and its bounding box then starts at the left of the second line. The icon is in the first box and the date in the last. So any linked task, on a project page or a task page's first line, opens the panel. Both open the panel with [`tl.openTaskPopover`](throughline.lua#L2473). Anything else passes through, and the link navigates as usual.
+Clicks. Listeners for mouse presses and clicks cover the whole document, in the capture phase, so they run before SilverBullet does. The panel opens on the press, in [`tl.onLinkPress`](throughline.lua#L2609): once the editor has focus, a press on a line moves the cursor there and SilverBullet swaps the link for its raw markdown, so a click handler would miss it. The click that follows is swallowed by [`tl.onLinkClick`](throughline.lua#L2619) so the link does not navigate. A marker attribute on `<html>` stops a second registration, because the file runs again on every configuration reload. A press outside an open panel closes it. On a projection, a press within about one link height of the left edge counts as a press on the icon, and a press on the date at the right end counts too; [`projectionHit`](throughline.lua#L2590) decides. It measures the link's line boxes, not its bounding box: a long link wraps, as a `blockedBy` link on a task page's first line often does, and its bounding box then starts at the left of the second line. The icon is in the first box and the date in the last. So any linked task, on a project page or a task page's first line, opens the panel. Both open the panel with [`tl.openTaskPopover`](throughline.lua#L2538). Anything else passes through, and the link navigates as usual.
 
-The panel. [`tl.openTaskPopover`](throughline.lua#L2473) builds plain DOM with `dom.*` and appends it to `<body>`, outside the editor, under the link. SilverBullet offers no way to put controls inside the editor, and elements inserted there would be read back as text, so the panel lives outside it. The top row has one button per configured state; a click calls [`tl.setTaskPageState`](throughline.lua#L544) and then [`tl.refreshStates`](throughline.lua#L2457), which redraws the links and calls [`tl.syncWidgets`](throughline.lua#L2440) so a board card on the same page moves at once. Below that is the form from [`attrForm`](throughline.lua#L660), which the board card uses too: Due and Scheduled are `<input type="date">` fields, so the browser's own calendar opens, and Progress is a slider. Each field writes on change through [`tl.setTaskAttr`](throughline.lua#L560). Its values come from [`tl.taskAttrs`](throughline.lua#L531), which reads the task page's text rather than the index, so they are current even right after a change. Escape, Done, scrolling, or a click outside closes the panel through [`tl.closePopover`](throughline.lua#L2466).
+The panel. [`tl.openTaskPopover`](throughline.lua#L2538) builds plain DOM with `dom.*` and appends it to `<body>`, outside the editor, under the link. SilverBullet offers no way to put controls inside the editor, and elements inserted there would be read back as text, so the panel lives outside it. The top row has one button per configured state; a click calls [`tl.setTaskPageState`](throughline.lua#L544) and then [`tl.refreshStates`](throughline.lua#L2522), which redraws the links and calls [`tl.syncWidgets`](throughline.lua#L2505) so a board card on the same page moves at once. Below that is the form from [`attrForm`](throughline.lua#L695), which the board card uses too: Due and Scheduled are `<input type="date">` fields, so the browser's own calendar opens, and Progress is a slider. Each field writes on change through [`tl.setTaskAttr`](throughline.lua#L560). Its values come from [`tl.taskAttrs`](throughline.lua#L531), which reads the task page's text rather than the index, so they are current even right after a change. Escape, Done, scrolling, or a click outside closes the panel through [`tl.closePopover`](throughline.lua#L2531).
 
-Blocked by. The form's Blocked by row shows the blocking task's name. Choose… opens SilverBullet's picker over the open task pages and writes `[blockedBy: [[Tasks/x]]]` through [`tl.setTaskAttr`](throughline.lua#L560); × removes it. While the picker shows, `tl.picking` keeps the panel open. [`linkTarget`](throughline.lua#L517) reads the page name back from the attribute, whether it comes from the page text or the index, and [`blockedChip`](throughline.lua#L630) draws "⛔ blocked by …" on board cards and Focus rows, struck through once the blocker's state is closed. [`tl.titleOf`](throughline.lua#L2395) gives the blocker's task text from the state cache.
+Blocked by. The form's Blocked by row shows the blocking task's name. Choose… opens SilverBullet's picker over the open task pages and writes `[blockedBy: [[Tasks/x]]]` through [`tl.setTaskAttr`](throughline.lua#L560); × removes it. While the picker shows, `tl.picking` keeps the panel open. [`linkTarget`](throughline.lua#L517) reads the page name back from the attribute, whether it comes from the page text or the index, and [`blockedChip`](throughline.lua#L631) draws the blocked-by chip, with the blocker's name, on board cards and Focus rows, struck through once the blocker's state is closed. [`tl.titleOf`](throughline.lua#L2460) gives the blocker's task text from the state cache.
 
 ![The Blocked by row in the panel](docs/explainer/blocked-by.png)
 
@@ -156,23 +156,23 @@ Progress. [`taskProgress`](throughline.lua#L602) gives a task's progress in perc
 
 | Piece | Code |
 | --- | --- |
-| Drawing state and due date on every projection link | [`tl.markLinks`](throughline.lua#L2413) |
-| The editor watcher that runs it at once | [`tl.onEditorChange`](throughline.lua#L2614) |
-| The state and due-date cache | [`tl.stateOf`](throughline.lua#L2372) |
-| A task page's due date | [`tl.dueOf`](throughline.lua#L2401) |
-| Recording a state Throughline just wrote | [`tl.noteState`](throughline.lua#L2407) |
+| Drawing state and due date on every projection link | [`tl.markLinks`](throughline.lua#L2478) |
+| The editor watcher that runs it at once | [`tl.onEditorChange`](throughline.lua#L2663) |
+| The state and due-date cache | [`tl.stateOf`](throughline.lua#L2437) |
+| A task page's due date | [`tl.dueOf`](throughline.lua#L2466) |
+| Recording a state Throughline just wrote | [`tl.noteState`](throughline.lua#L2472) |
 | Preferring a just-written state over the index | [`pendingState`](throughline.lua#L467) |
-| Click handling for the icon, the date and the text | [`tl.onLinkClick`](throughline.lua#L2570) |
-| The editing panel | [`tl.openTaskPopover`](throughline.lua#L2473) |
-| Closing it | [`tl.closePopover`](throughline.lua#L2466) |
-| Date and progress fields | [`attrForm`](throughline.lua#L660) |
+| Click handling for the icon, the date and the text | [`tl.onLinkClick`](throughline.lua#L2619) |
+| The editing panel | [`tl.openTaskPopover`](throughline.lua#L2538) |
+| Closing it | [`tl.closePopover`](throughline.lua#L2531) |
+| Date and progress fields | [`attrForm`](throughline.lua#L695) |
 | Reading a link-valued attribute | [`linkTarget`](throughline.lua#L517) |
-| The blocked-by chip | [`blockedChip`](throughline.lua#L630) |
-| A task page's task text | [`tl.titleOf`](throughline.lua#L2395) |
+| The blocked-by chip | [`blockedChip`](throughline.lua#L631) |
+| A task page's task text | [`tl.titleOf`](throughline.lua#L2460) |
 | Progress of a task | [`taskProgress`](throughline.lua#L602) |
-| Redrawing links and widgets after a change | [`tl.refreshStates`](throughline.lua#L2457) |
-| Moving board cards and Focus rows to match | [`tl.syncWidgets`](throughline.lua#L2440) |
-| The panel's stylesheet | [Task popover block](Throughline.md?plain=1#L3973) |
+| Redrawing links and widgets after a change | [`tl.refreshStates`](throughline.lua#L2522) |
+| Moving board cards and Focus rows to match | [`tl.syncWidgets`](throughline.lua#L2505) |
+| The panel's stylesheet | [Task popover block](Throughline.md?plain=1#L4054) |
 
 ## Making, promoting and deleting task pages
 
@@ -192,23 +192,23 @@ Next, `tl.makeTaskPage` finds the project. It checks, in order: a project link o
 
 The new page gets front matter that hides it from the page tree, then the task block. A nested task on a task page also gets a `partOf` line that points to its parent. This is the promotion case. The task in the editor is then replaced by a projection, `- [[Tasks/<name>|<text>]]`. If the project is a different existing page, `appendToList` adds the projection to the project's list. That function places the projection after the last existing projection, or adds a `## Tasks` heading at the end. The project page is read and written with `tl.read` and `tl.write`. Last, the state cache is cleared.
 
-`tl.deleteTaskPage` deletes a page and its projections. Without an argument it uses `taskPageAtCursor`. That function returns the open page if it is a task page, or else the task page linked on the current line. `tl.deleteTaskPage` scans the link index for pages that link to the target. On each of those pages it counts the list items that start with a link to the target. It then asks for confirmation and lists the pages with their counts. The confirmation is `editor.confirm` with `destructive = true`, which draws Ok in red. After confirmation, it removes those lines from each page. If the target is the open page, it navigates to the index. It deletes the page with `space.deletePage` inside `pcall`. The deletion reaches the server only at the next sync. Other links to the page stay, as links to a missing page. When the task has subtasks, [`subtaskBlocks`](throughline.lua#L2864) finds each task nested directly under it, with everything nested below. [`askAboutSubtasks`](throughline.lua#L2919) then opens one window that asks whether the subtasks become tasks of their own or are deleted too, and a second that confirms the choice, listing them and the projections to be removed (that text wraps; a picker title does not); cancelling either cancels the delete. A task without subtasks gets a single confirmation instead. The board card, the task panel and the command all call the same function, so they behave the same. Kept subtasks go through [`promoteSubtasks`](throughline.lua#L2895): each becomes a task page linked to the deleted task's project and is listed on the project page, as Make task page would do.
+`tl.deleteTaskPage` deletes a page and its projections. Without an argument it uses `taskPageAtCursor`. That function returns the open page if it is a task page, or else the task page linked on the current line. `tl.deleteTaskPage` scans the link index for pages that link to the target. On each of those pages it counts the list items that start with a link to the target. It then asks for confirmation and lists the pages with their counts. The confirmation is `editor.confirm` with `destructive = true`, which draws Ok in red. After confirmation, it removes those lines from each page. If the target is the open page, it navigates to the index. It deletes the page with `space.deletePage` inside `pcall`. The deletion reaches the server only at the next sync. Other links to the page stay, as links to a missing page. When the task has subtasks, [`subtaskBlocks`](throughline.lua#L2913) finds each task nested directly under it, with everything nested below. [`askAboutSubtasks`](throughline.lua#L2968) then opens one window that asks whether the subtasks become tasks of their own or are deleted too, and a second that confirms the choice, listing them and the projections to be removed (that text wraps; a picker title does not); cancelling either cancels the delete. A task without subtasks gets a single confirmation instead. The board card, the task panel and the command all call the same function, so they behave the same. Kept subtasks go through [`promoteSubtasks`](throughline.lua#L2944): each becomes a task page linked to the deleted task's project and is listed on the project page, as Make task page would do.
 
 The commands and the slash command call these functions. Make task page and Promote subtask both call `tl.makeTaskPage`. Delete task page calls `tl.deleteTaskPage` with no argument. `/task` works on any line. It reads the line as indent, an optional list mark, an optional `[state]` and the text, and writes it back as `- [state] text`, keeping a state that was there. An empty line asks for the text first, and a line that is already a projection is refused. Then it calls `tl.makeTaskPage`. Throughline's `/task` replaces SilverBullet's own.
 
 | Piece | Code |
 | --- | --- |
-| Making a task page, and promoting a subtask | [`tl.makeTaskPage`](throughline.lua#L2776) |
-| Finding the task block under the cursor | [`blockAt`](throughline.lua#L2731) |
-| Suggesting a page name from task text | [`tl.slugFor`](throughline.lua#L2712) |
-| Adding a projection to a project's list | [`appendToList`](throughline.lua#L977) |
-| Choosing the task page for a delete | [`taskPageAtCursor`](throughline.lua#L2836) |
-| A task page's subtasks | [`subtaskBlocks`](throughline.lua#L2864) |
-| Asking what happens to them | [`askAboutSubtasks`](throughline.lua#L2919) |
-| Making them tasks of their own | [`promoteSubtasks`](throughline.lua#L2895) |
-| Deleting a task page and its projections | [`tl.deleteTaskPage`](throughline.lua#L2946) |
-| The three commands | [`command.define`](throughline.lua#L3001) |
-| The `/task` slash command | [`slashCommand.define`](throughline.lua#L3010) |
+| Making a task page, and promoting a subtask | [`tl.makeTaskPage`](throughline.lua#L2825) |
+| Finding the task block under the cursor | [`blockAt`](throughline.lua#L2780) |
+| Suggesting a page name from task text | [`tl.slugFor`](throughline.lua#L2761) |
+| Adding a projection to a project's list | [`appendToList`](throughline.lua#L1014) |
+| Choosing the task page for a delete | [`taskPageAtCursor`](throughline.lua#L2885) |
+| A task page's subtasks | [`subtaskBlocks`](throughline.lua#L2913) |
+| Asking what happens to them | [`askAboutSubtasks`](throughline.lua#L2968) |
+| Making them tasks of their own | [`promoteSubtasks`](throughline.lua#L2944) |
+| Deleting a task page and its projections | [`tl.deleteTaskPage`](throughline.lua#L2995) |
+| The three commands | [`command.define`](throughline.lua#L3050) |
+| The `/task` slash command | [`slashCommand.define`](throughline.lua#L3059) |
 
 ## The board
 
@@ -218,56 +218,56 @@ The board is a widget. Put `${throughline.board()}` on a project page and it dra
 
 ### How it works
 
-[`tl.board`](throughline.lua#L1162) takes the project, which defaults to the page it sits on. It gathers the project's tasks and sorts them. The order follows the project page's own list of task links, read by [`listOrder`](throughline.lua#L963), which keeps the first position of each link. Tasks the list leaves out come after the listed ones, earliest due first.
+[`tl.board`](throughline.lua#L1199) takes the project, which defaults to the page it sits on. It gathers the project's tasks and sorts them. The order follows the project page's own list of task links, read by [`listOrder`](throughline.lua#L1000), which keeps the first position of each link. Tasks the list leaves out come after the listed ones, earliest due first.
 
-Next, `tl.board` makes one column for each distinct column key among the open states. A card goes into the column its state maps to through [`tl.columnOf`](throughline.lua#L367). Each column comes from [`column`](throughline.lua#L1112). It has a head with the state icon, a count, and a list of cards. The Done column is different. It holds the closed tasks, and [`column`](throughline.lua#L1112) folds it inside a `details` element that shows "N closed".
+Next, `tl.board` makes one column for each distinct column key among the open states. A card goes into the column its state maps to through [`tl.columnOf`](throughline.lua#L367). Each column comes from [`column`](throughline.lua#L1149). It has a head with the state icon, a count, and a list of cards. The Done column is different. It holds the closed tasks, and [`column`](throughline.lua#L1149) folds it inside a `details` element that shows "N closed".
 
-Each card comes from [`card`](throughline.lua#L849). The card is a `details` element. Its summary holds the state icon, the title and the chips, from [`cardChips`](throughline.lua#L831). The project name is the first chip. The due and scheduled dates follow, and a progress ring when the task has subtasks or a `[progress]` value, from [`progressChip`](throughline.lua#L618). [`dateChips`](throughline.lua#L790) marks a date as overdue when it has passed and as today when it is today, unless the task is closed. [`projectOf`](throughline.lua#L808) picks the project name for the first chip.
+Each card comes from [`card`](throughline.lua#L882). The card is a `details` element. Its summary holds the state icon, the title and the chips, from [`cardChips`](throughline.lua#L868). The chips are the due and scheduled dates, each with an icon the stylesheet draws, and a progress ring when the task has subtasks or a `[progress]` value, from [`progressChip`](throughline.lua#L618). [`dateChips`](throughline.lua#L826) marks a date as overdue when it has passed and as today when it is today, unless the task is closed. The project is not a chip: every card on a board belongs to the board's project. [`projectOf`](throughline.lua#L844) still records it on the card.
 
-A card's state changes by dragging (below), or anywhere else on the page: from the task list's panel, or from a Focus row. [`tl.syncWidgets`](throughline.lua#L2440) compares each card's `data-state` with the cached state and moves the card when they differ, through [`placeCard`](throughline.lua#L918). That function moves the card element into the column of the new state, updates its icon and attributes, and recounts both columns with [`tl.recount`](throughline.lua#L902). It runs right after Throughline changes a state, and on every tick for changes made elsewhere. [`tl.moveCard`](throughline.lua#L956) is `placeCard` plus the write to the task page.
+A card's state changes by dragging (below), or anywhere else on the page: from the task list's panel, or from a Focus row. [`tl.syncWidgets`](throughline.lua#L2505) compares each card's `data-state` with the cached state and moves the card when they differ, through [`placeCard`](throughline.lua#L956). That function moves the card element into the column of the new state, updates its icon and attributes, and recounts both columns with [`tl.recount`](throughline.lua#L940). It runs right after Throughline changes a state, and on every tick for changes made elsewhere. [`tl.moveCard`](throughline.lua#L993) is `placeCard` plus the write to the task page.
 
-The card body is built the first time the card opens, in the card's `toggle` handler, so drawing a board reads no task page. It holds the date, blocker and progress form from [`attrForm`](throughline.lua#L660), the same one the projection panel uses, with the blocking task shown as a link to it; after a change, [`tl.refreshCard`](throughline.lua#L936) redraws the card's chips from the page. The task's notes and subtasks stay on its page: the body ends with a View full task button and a Delete button. Subtasks still come from the index through [`subtasksByPage`](throughline.lua#L818), for the progress ring.
+The card body is built the first time the card opens, in the card's `toggle` handler, so drawing a board reads no task page. It starts with one button per state, from [`stateButtons`](throughline.lua#L665), the same row the projection panel shows: pressing one moves the card through `tl.moveCard`, which is how a state changes without a drag, on a touch screen or from the keyboard. Below it is the date, blocker and progress form from [`attrForm`](throughline.lua#L695), the same one the projection panel uses, with the blocking task shown as a link to it; after a change, [`tl.refreshCard`](throughline.lua#L975) redraws the card's chips from the page. The task's notes and subtasks stay on its page: the body ends with a View full task button and a Delete button. Subtasks still come from the index through [`subtasksByPage`](throughline.lua#L854), for the progress ring.
 
-The To do column ends with a New task button. [`tl.newTaskCard`](throughline.lua#L1091) asks for the task text. It writes a task page named by [`tl.slugFor`](throughline.lua#L2712), with the task in the column's drop state and a link to the project, and the same frontmatter Make task page uses, [`TASK_PAGE_FRONTMATTER`](throughline.lua#L443). It adds the projection to the project page's list with [`appendToList`](throughline.lua#L977), then builds the card with [`card`](throughline.lua#L849) and appends it to the column, so the card shows without a reload.
+The To do column ends with a New task button. [`tl.newTaskCard`](throughline.lua#L1128) asks for the task text. It writes a task page named by [`tl.slugFor`](throughline.lua#L2761), with the task in the column's drop state and a link to the project, and the same frontmatter Make task page uses, [`TASK_PAGE_FRONTMATTER`](throughline.lua#L443). It adds the projection to the project page's list with [`appendToList`](throughline.lua#L1014), then builds the card with [`card`](throughline.lua#L882) and appends it to the column, so the card shows without a reload.
 
-A column that holds a backlog state, To do by default, has a Hide backlog button in its header. [`tl.toggleBacklog`](throughline.lua#L1078) puts the class `tl-hide-backlog` on every board on screen, and the stylesheet then hides every card whose `data-cat` is `backlog`. The choice is saved once for all projects in the browser with `storeSet`, and [`tl.board`](throughline.lua#L1162) reads it back when it draws the board. While cards are hidden the button reads "Show backlog (n)". [`tl.recount`](throughline.lua#L902) keeps that number right as cards move, and [`tl.moveCard`](throughline.lua#L956) updates a card's `data-cat` when its state changes.
+A column that holds a backlog state, To do by default, has a Hide backlog button in its header. [`tl.toggleBacklog`](throughline.lua#L1115) puts the class `tl-hide-backlog` on every board on screen, and the stylesheet then hides every card whose `data-cat` is `backlog`. The choice is saved once for all projects in the browser with `storeSet`, and [`tl.board`](throughline.lua#L1199) reads it back when it draws the board. While cards are hidden the button reads "Show backlog (n)". [`tl.recount`](throughline.lua#L940) keeps that number right as cards move, and [`tl.moveCard`](throughline.lua#L993) updates a card's `data-cat` when its state changes.
 
 ![Hide backlog and New task in the To do column](docs/explainer/board-todo.png)
 
-Dragging starts on the card. The drag carries the task page name. While a card hovers over a column, [`tl.placeMarker`](throughline.lua#L1026) puts a marker line before the first card whose middle is below the pointer. Without such a card, the marker goes at the end. Columns that are folded, such as Done, show no marker.
+Dragging starts on the card. The drag carries the task page name. While a card hovers over a column, [`tl.placeMarker`](throughline.lua#L1063) puts a marker line before the first card whose middle is below the pointer. Without such a card, the marker goes at the end. Columns that are folded, such as Done, show no marker.
 
 ![While dragging, a line shows where the card will land](docs/explainer/board-drag.png)
 
-The drop calls [`tl.dropCard`](throughline.lua#L1048). It moves the card to the marker. It notes the cards on either side of the marker. If the column changed, it sets the new state through [`tl.moveCard`](throughline.lua#L956). Then it calls [`tl.reorder`](throughline.lua#L996) with the project. [`tl.reorder`](throughline.lua#L996) moves the card's line in the project page to just before the card below it, else just after the card above it, else to the end of the task list. If the task is not listed at all, it adds a line for it. If no neighbour was found and the task is already listed, the list does not change. The card's `dragend` handler calls [`tl.clearMarker`](throughline.lua#L1020) to remove the marker.
+The drop calls [`tl.dropCard`](throughline.lua#L1085). It moves the card to the marker. It notes the cards on either side of the marker. If the column changed, it sets the new state through [`tl.moveCard`](throughline.lua#L993). Then it calls [`tl.reorder`](throughline.lua#L1033) with the project. [`tl.reorder`](throughline.lua#L1033) moves the card's line in the project page to just before the card below it, else just after the card above it, else to the end of the task list. If the task is not listed at all, it adds a line for it. If no neighbour was found and the task is already listed, the list does not change. The card's `dragend` handler calls [`tl.clearMarker`](throughline.lua#L1057) to remove the marker.
 
-The board also changes the project page's look. [`tl.markProjectPage`](throughline.lua#L2651) runs on each `editor:pageLoaded` event and on every tick of the background clock. It adds the class `tl-project` to the body when the page has the `project` tag, and removes it otherwise. The stylesheet hides SilverBullet's Linked Tasks and Linked Mentions panels under that class.
+The board also changes the project page's look. [`tl.markProjectPage`](throughline.lua#L2700) runs on each `editor:pageLoaded` event and on every tick of the background clock. It adds the class `tl-project` to the body when the page has the `project` tag, and removes it otherwise. The stylesheet hides SilverBullet's Linked Tasks and Linked Mentions panels under that class.
 
 | Piece | Code |
 | --- | --- |
-| Board widget | [`tl.board`](throughline.lua#L1162) |
-| Column | [`column`](throughline.lua#L1112) |
-| Card | [`card`](throughline.lua#L849) |
-| Date chips | [`dateChips`](throughline.lua#L790) |
-| Project chip | [`projectOf`](throughline.lua#L808) |
-| Subtasks | [`subtasksByPage`](throughline.lua#L818) |
-| Card chips | [`cardChips`](throughline.lua#L831) |
+| Board widget | [`tl.board`](throughline.lua#L1199) |
+| Column | [`column`](throughline.lua#L1149) |
+| Card | [`card`](throughline.lua#L882) |
+| Date chips | [`dateChips`](throughline.lua#L826) |
+| A card's project | [`projectOf`](throughline.lua#L844) |
+| Subtasks | [`subtasksByPage`](throughline.lua#L854) |
+| Card chips | [`cardChips`](throughline.lua#L868) |
 | Progress ring on a card | [`progressChip`](throughline.lua#L618) |
-| Showing a card in a new state | [`placeCard`](throughline.lua#L918) |
-| Moving cards to match states changed elsewhere | [`tl.syncWidgets`](throughline.lua#L2440) |
-| Redrawing a card's chips | [`tl.refreshCard`](throughline.lua#L936) |
-| State change | [`tl.moveCard`](throughline.lua#L956) |
-| Column counts | [`tl.recount`](throughline.lua#L902) |
-| Board order | [`listOrder`](throughline.lua#L963) |
-| Reorder the project list | [`tl.reorder`](throughline.lua#L996) |
-| New task button | [`tl.newTaskCard`](throughline.lua#L1091) |
-| Hide backlog button | [`tl.toggleBacklog`](throughline.lua#L1078) |
-| Backlog and New task (CSS) | [Hide backlog block](Throughline.md?plain=1#L3625) |
-| Clear the drop marker | [`tl.clearMarker`](throughline.lua#L1020) |
-| Place the drop marker | [`tl.placeMarker`](throughline.lua#L1026) |
-| Drop | [`tl.dropCard`](throughline.lua#L1048) |
-| Project page panels | [`tl.markProjectPage`](throughline.lua#L2651) |
-| Hide the panels (CSS) | [`body.tl-project`](Throughline.md?plain=1#L4068) |
-| Board (CSS) | [Board block](Throughline.md?plain=1#L3544) |
+| Showing a card in a new state | [`placeCard`](throughline.lua#L956) |
+| Moving cards to match states changed elsewhere | [`tl.syncWidgets`](throughline.lua#L2505) |
+| Redrawing a card's chips | [`tl.refreshCard`](throughline.lua#L975) |
+| State change | [`tl.moveCard`](throughline.lua#L993) |
+| Column counts | [`tl.recount`](throughline.lua#L940) |
+| Board order | [`listOrder`](throughline.lua#L1000) |
+| Reorder the project list | [`tl.reorder`](throughline.lua#L1033) |
+| New task button | [`tl.newTaskCard`](throughline.lua#L1128) |
+| Hide backlog button | [`tl.toggleBacklog`](throughline.lua#L1115) |
+| Backlog and New task (CSS) | [Hide backlog block](Throughline.md?plain=1#L3686) |
+| Clear the drop marker | [`tl.clearMarker`](throughline.lua#L1057) |
+| Place the drop marker | [`tl.placeMarker`](throughline.lua#L1063) |
+| Drop | [`tl.dropCard`](throughline.lua#L1085) |
+| Project page panels | [`tl.markProjectPage`](throughline.lua#L2700) |
+| Hide the panels (CSS) | [`body.tl-project`](Throughline.md?plain=1#L4178) |
+| Board (CSS) | [Board block](Throughline.md?plain=1#L3605) |
 
 ![An expanded card: dates, blocker and progress](docs/explainer/board-card-open.png)
 
@@ -277,23 +277,23 @@ A project is a page tagged `project`. Its `status` frontmatter sets where it sta
 
 ### How it works
 
-[`tl.projectList`](throughline.lua#L1236) returns every page tagged `project`, except pages under `Library/`. [`tl.statusOf`](throughline.lua#L1248) matches the page's `status` against the configured statuses. It compares the status key or the label, ignoring case. A page with no status counts as the first started status. A status that matches nothing gets a section of its own, marked as unknown.
+[`tl.projectList`](throughline.lua#L1273) returns every page tagged `project`, except pages under `Library/`. [`tl.statusOf`](throughline.lua#L1285) matches the page's `status` against the configured statuses. It compares the status key or the label, ignoring case. A page with no status counts as the first started status. A status that matches nothing gets a section of its own, marked as unknown.
 
-[`tl.updatesOf`](throughline.lua#L1267) reads the text of the page. It finds headings of the form `### 2026-10-19 [health: at-risk]`, and it keeps the text under each one. It returns the updates newest first. Each health word goes through [`normHealth`](throughline.lua#L1227). That function lowercases the word and turns spaces and underscores into hyphens. It also maps `ontrack`, `atrisk` and `offtrack` to their hyphenated forms.
+[`tl.updatesOf`](throughline.lua#L1304) reads the text of the page. It finds headings of the form `### 2026-10-19 [health: at-risk]`, and it keeps the text under each one. It returns the updates newest first. Each health word goes through [`normHealth`](throughline.lua#L1264). That function lowercases the word and turns spaces and underscores into hyphens. It also maps `ontrack`, `atrisk` and `offtrack` to their hyphenated forms.
 
-[`tl.healthOf`](throughline.lua#L1288) decides what the health pill shows. A completed or canceled project shows "No update expected". A project with no updates shows "No updates". For a started project, an update older than twice the update cadence shows "Update missing". An update older than the cadence is stale, and the pill still shows its health. Any other update shows its health. The cadence is the `throughline.updateDays` setting, which defaults to 7 days.
+[`tl.healthOf`](throughline.lua#L1325) decides what the health pill shows. A completed or canceled project shows "No update expected". A project with no updates shows "No updates". For a started project, an update older than twice the update cadence shows "Update missing". An update older than the cadence is stale, and the pill still shows its health. Any other update shows its health. The cadence is the `throughline.updateDays` setting, which defaults to 7 days.
 
-Changing a status goes through [`tl.setProjectStatus`](throughline.lua#L1322). It reads the page and passes the text to [`frontmatterSet`](throughline.lua#L1310). That function replaces the `status` line. It adds the line if the frontmatter has none, and it adds a frontmatter block if the page has none. Then the page is written back.
+Changing a status goes through [`tl.setProjectStatus`](throughline.lua#L1359). It reads the page and passes the text to [`frontmatterSet`](throughline.lua#L1347). That function replaces the `status` line. It adds the line if the frontmatter has none, and it adds a frontmatter block if the page has none. Then the page is written back.
 
 | Piece | Code |
 | --- | --- |
-| Project list | [`tl.projectList`](throughline.lua#L1236) |
-| Status lookup | [`tl.statusOf`](throughline.lua#L1248) |
-| Health word | [`normHealth`](throughline.lua#L1227) |
-| Updates from the page | [`tl.updatesOf`](throughline.lua#L1267) |
-| Health shown on the card | [`tl.healthOf`](throughline.lua#L1288) |
-| Frontmatter edit | [`frontmatterSet`](throughline.lua#L1310) |
-| Status write | [`tl.setProjectStatus`](throughline.lua#L1322) |
+| Project list | [`tl.projectList`](throughline.lua#L1273) |
+| Status lookup | [`tl.statusOf`](throughline.lua#L1285) |
+| Health word | [`normHealth`](throughline.lua#L1264) |
+| Updates from the page | [`tl.updatesOf`](throughline.lua#L1304) |
+| Health shown on the card | [`tl.healthOf`](throughline.lua#L1325) |
+| Frontmatter edit | [`frontmatterSet`](throughline.lua#L1347) |
+| Status write | [`tl.setProjectStatus`](throughline.lua#L1359) |
 
 ## Time logging
 
@@ -301,18 +301,18 @@ Any list item or task that links to a project can carry a time, such as `[time: 
 
 ### How it works
 
-[`timeEntries`](throughline.lua#L1339) collects every item with a `time` value, from the index. It reads both list items and tasks. Each entry is counted once, by its reference. The day of an entry is its own `date`. Without one, the day is the date in the name of its page, which suits journal pages.
+[`timeEntries`](throughline.lua#L1376) collects every item with a `time` value, from the index. It reads both list items and tasks. Each entry is counted once, by its reference. The day of an entry is its own `date`. Without one, the day is the date in the name of its page, which suits journal pages.
 
 [`minutesOf`](throughline.lua#L265) turns the text into minutes. It reads `2h30m`, `1.5h` and `45m`. A bare number counts as hours when no unit is present.
 
-[`projectData`](throughline.lua#L1360) adds up the minutes for each project it counts. It uses [`weekStart`](throughline.lua#L243) to find the Monday on or before today. Entries from that Monday on count as this week. Entries from the last 28 days count as the four-week figure. Every entry counts toward the total. The overview's stat cells show these three figures through [`fmtMinutes`](throughline.lua#L279). That function shows a dash for zero, then minutes, then hours, then hours and minutes.
+[`projectData`](throughline.lua#L1397) adds up the minutes for each project it counts. It uses [`weekStart`](throughline.lua#L243) to find the Monday on or before today. Entries from that Monday on count as this week. Entries from the last 28 days count as the four-week figure. Every entry counts toward the total. The overview's stat cells show these three figures through [`fmtMinutes`](throughline.lua#L279). That function shows a dash for zero, then minutes, then hours, then hours and minutes.
 
 | Piece | Code |
 | --- | --- |
-| Time entries | [`timeEntries`](throughline.lua#L1339) |
+| Time entries | [`timeEntries`](throughline.lua#L1376) |
 | Minutes from text | [`minutesOf`](throughline.lua#L265) |
 | Week start | [`weekStart`](throughline.lua#L243) |
-| Totals per project | [`projectData`](throughline.lua#L1360) |
+| Totals per project | [`projectData`](throughline.lua#L1397) |
 | Display | [`fmtMinutes`](throughline.lua#L279) |
 
 ## The projects overview
@@ -323,43 +323,43 @@ The overview is a widget. Put `${throughline.projects()}` on a page and it shows
 
 ### How it works
 
-[`tl.projects`](throughline.lua#L1610) builds the overview. It takes the board columns from [`boardColumns`](throughline.lua#L1417) and the data for each project from [`projectData`](throughline.lua#L1360). Each project's data comes with its status, updates, health, task counts, progress and time.
+[`tl.projects`](throughline.lua#L1647) builds the overview. It takes the board columns from [`boardColumns`](throughline.lua#L1454) and the data for each project from [`projectData`](throughline.lua#L1397). Each project's data comes with its status, updates, health, task counts, progress and time.
 
-The cards sort in a fixed order. A project that the current page links to comes first, in the order of those links. [`mentionOrder`](throughline.lua#L1328) reads that order from the page's links. The other projects follow by next due date, then by title.
+The cards sort in a fixed order. A project that the current page links to comes first, in the order of those links. [`mentionOrder`](throughline.lua#L1365) reads that order from the page's links. The other projects follow by next due date, then by title.
 
-The cards then go into sections, one for each configured status. Each status gets a section, even when it has no cards, and the stylesheet hides an empty one. Unknown statuses get a section too. The sections sort by category through [`categoryRank`](throughline.lua#L1560). Sections for completed and canceled statuses carry the class `tl-psection-closed`. The stylesheet hides those sections unless the widget also has the class `tl-show-closed`.
+The cards then go into sections, one for each configured status. Each status gets a section, even when it has no cards, and the stylesheet hides an empty one. Unknown statuses get a section too. The sections sort by category through [`categoryRank`](throughline.lua#L1597). Sections for completed and canceled statuses carry the class `tl-psection-closed`. The stylesheet hides those sections unless the widget also has the class `tl-show-closed`.
 
-[`projectData`](throughline.lua#L1360) counts the tasks linked to each project. It counts them per board column, and it counts open, done and canceled tasks. An open task that is due before today is overdue. An open task due within 7 days is due soon. The next due task is the earliest open task with a due date. Progress is the done share of all tasks except canceled ones, rounded to a percent. The last activity is the newest change to the project page or to one of its task pages.
+[`projectData`](throughline.lua#L1397) counts the tasks linked to each project. It counts them per board column, and it counts open, done and canceled tasks. An open task that is due before today is overdue. An open task due within 7 days is due soon. The next due task is the earliest open task with a due date. Progress is the done share of all tasks except canceled ones, rounded to a percent. The last activity is the newest change to the project page or to one of its task pages.
 
-[`projectCard`](throughline.lua#L1479) draws each card. The collapsed card shows the category icon, the name, the health pill from [`healthPill`](throughline.lua#L1430), the progress ring from [`progressRing`](throughline.lua#L1439), an overdue chip, and a count per board column. The expanded card shows the latest update and a grid of figures from [`stat`](throughline.lua#L1472). The grid holds the status dropdown from [`statusSelect`](throughline.lua#L1451), and it lists progress, open, overdue, due soon, next due, the three time figures, the update count and last activity. The card ends with Open project and Post update buttons.
+[`projectCard`](throughline.lua#L1516) draws each card. The collapsed card shows the category icon, the name, the health pill from [`healthPill`](throughline.lua#L1467), the progress ring from [`progressRing`](throughline.lua#L1476), an overdue chip, and a count per board column. The expanded card shows the latest update and a grid of figures from [`stat`](throughline.lua#L1509). The grid holds the status dropdown from [`statusSelect`](throughline.lua#L1488), and it lists progress, open, overdue, due soon, next due, the three time figures, the update count and last activity. The card ends with Open project and Post update buttons.
 
-Changing the status in the dropdown calls [`tl.changeProjectStatus`](throughline.lua#L1563). It writes the new status with [`tl.setProjectStatus`](throughline.lua#L1322). Then it moves the card element into the grid of its new section and updates its category icon. [`tl.recountSections`](throughline.lua#L1586) recounts the sections. It hides any section with no cards, and it updates the number on the Show completed button.
+Changing the status in the dropdown calls [`tl.changeProjectStatus`](throughline.lua#L1600). It writes the new status with [`tl.setProjectStatus`](throughline.lua#L1359). Then it moves the card element into the grid of its new section and updates its category icon. [`tl.recountSections`](throughline.lua#L1623) recounts the sections. It hides any section with no cards, and it updates the number on the Show completed button.
 
 ![An expanded project card](docs/project-card.png)
 
-Show completed is a button in the toolbar. [`tl.toggleClosed`](throughline.lua#L1601) switches the class on the widget and saves the choice for the page. The saved value is kept with [`storeSet`](throughline.lua#L176) under a key that holds the page name. [`tl.projects`](throughline.lua#L1610) reads the choice back with [`storeGet`](throughline.lua#L171). Both store functions catch errors, so a failed save only loses the choice.
+Show completed is a button in the toolbar. [`tl.toggleClosed`](throughline.lua#L1638) switches the class on the widget and saves the choice for the page. The saved value is kept with [`storeSet`](throughline.lua#L176) under a key that holds the page name. [`tl.projects`](throughline.lua#L1647) reads the choice back with [`storeGet`](throughline.lua#L171). Both store functions catch errors, so a failed save only loses the choice.
 
 ![Show completed reveals Done and Dropped projects](docs/explainer/show-completed.png)
 
 | Piece | Code |
 | --- | --- |
-| Overview widget | [`tl.projects`](throughline.lua#L1610) |
-| Data per project | [`projectData`](throughline.lua#L1360) |
-| Board columns | [`boardColumns`](throughline.lua#L1417) |
-| Order from links | [`mentionOrder`](throughline.lua#L1328) |
-| Section order | [`categoryRank`](throughline.lua#L1560) |
-| Project card | [`projectCard`](throughline.lua#L1479) |
-| Health pill | [`healthPill`](throughline.lua#L1430) |
-| Progress ring | [`progressRing`](throughline.lua#L1439) |
-| Status dropdown | [`statusSelect`](throughline.lua#L1451) |
-| Figure cell | [`stat`](throughline.lua#L1472) |
-| Status change | [`tl.changeProjectStatus`](throughline.lua#L1563) |
-| Section counts | [`tl.recountSections`](throughline.lua#L1586) |
+| Overview widget | [`tl.projects`](throughline.lua#L1647) |
+| Data per project | [`projectData`](throughline.lua#L1397) |
+| Board columns | [`boardColumns`](throughline.lua#L1454) |
+| Order from links | [`mentionOrder`](throughline.lua#L1365) |
+| Section order | [`categoryRank`](throughline.lua#L1597) |
+| Project card | [`projectCard`](throughline.lua#L1516) |
+| Health pill | [`healthPill`](throughline.lua#L1467) |
+| Progress ring | [`progressRing`](throughline.lua#L1476) |
+| Status dropdown | [`statusSelect`](throughline.lua#L1488) |
+| Figure cell | [`stat`](throughline.lua#L1509) |
+| Status change | [`tl.changeProjectStatus`](throughline.lua#L1600) |
+| Section counts | [`tl.recountSections`](throughline.lua#L1623) |
 | Read a saved choice | [`storeGet`](throughline.lua#L171) |
 | Save a choice | [`storeSet`](throughline.lua#L176) |
-| Show completed | [`tl.toggleClosed`](throughline.lua#L1601) |
-| Project status icons (CSS) | [Project status icons block](Throughline.md?plain=1#L3446) |
-| Projects overview (CSS) | [Projects overview block](Throughline.md?plain=1#L3669) |
+| Show completed | [`tl.toggleClosed`](throughline.lua#L1638) |
+| Project status icons (CSS) | [Project status icons block](Throughline.md?plain=1#L3495) |
+| Projects overview (CSS) | [Projects overview block](Throughline.md?plain=1#L3742) |
 
 ## Project commands
 
@@ -369,23 +369,23 @@ Three commands in the command palette act on projects: Throughline: New project,
 
 ### How it works
 
-[`chooseProject`](throughline.lua#L1693) picks the project for a command. It uses the project it is given, or else the open page. If that page is in the project list, it is used. Otherwise a picker lists the projects.
+[`chooseProject`](throughline.lua#L1734) picks the project for a command. It uses the project it is given, or else the open page. If that page is in the project list, it is used. Otherwise a picker lists the projects.
 
-[`tl.postUpdate`](throughline.lua#L1710) asks for a health: On track, At risk or Off track. It then asks for a line of text. It builds a heading with today's date and the health, followed by the text. It finds the `## Updates` heading and inserts the new update right under it, so the newest update comes first. If the page has no `## Updates` heading, the function adds one at the end of the page. It writes the page and shows a short notice.
+[`tl.postUpdate`](throughline.lua#L1751) asks for a health: On track, At risk or Off track. It then asks for a line of text. It builds a heading with today's date and the health, followed by the text. It finds the `## Updates` heading and inserts the new update right under it, so the newest update comes first. If the page has no `## Updates` heading, the function adds one at the end of the page. It writes the page and shows a short notice.
 
-[`tl.pickProjectStatus`](throughline.lua#L1744) picks a project, then picks one of the configured statuses. It sets the status through [`tl.setProjectStatus`](throughline.lua#L1322) and shows a notice.
+[`tl.pickProjectStatus`](throughline.lua#L1785) picks a project, then picks one of the configured statuses. It sets the status through [`tl.setProjectStatus`](throughline.lua#L1359) and shows a notice.
 
-[`tl.newProject`](throughline.lua#L1757) asks for a name. It refuses a blank name and a name that already exists. Otherwise it writes a page in the project folder, named from the input, with the tags `project` and the status `active`. The page gets the board widget and the `## Tasks` and `## Updates` headings. Then it opens the new page.
+[`tl.newProject`](throughline.lua#L1798) asks for a name. It refuses a blank name and a name that already exists. Otherwise it writes a page in the project folder, named from the input, with the tags `project` and the status `active`. The page gets the board widget and the `## Tasks` and `## Updates` headings. Then it opens the new page.
 
-The three commands are defined at [`command.define`](throughline.lua#L3001). Each one calls the matching `throughline` function.
+The three commands are defined at [`command.define`](throughline.lua#L3050). Each one calls the matching `throughline` function.
 
 | Piece | Code |
 | --- | --- |
-| Project choice | [`chooseProject`](throughline.lua#L1693) |
-| Post update | [`tl.postUpdate`](throughline.lua#L1710) |
-| Set status | [`tl.pickProjectStatus`](throughline.lua#L1744) |
-| New project | [`tl.newProject`](throughline.lua#L1757) |
-| Command definitions | [`command.define`](throughline.lua#L3001) |
+| Project choice | [`chooseProject`](throughline.lua#L1734) |
+| Post update | [`tl.postUpdate`](throughline.lua#L1751) |
+| Set status | [`tl.pickProjectStatus`](throughline.lua#L1785) |
+| New project | [`tl.newProject`](throughline.lua#L1798) |
+| Command definitions | [`command.define`](throughline.lua#L3050) |
 
 ## The Focus list
 
@@ -397,11 +397,11 @@ The Focus list shows every open task in your space, sorted into sections: Overdu
 
 ### How it works
 
-[`tl.focus`](throughline.lua#L2276) builds the list when the page renders. It starts from the widget's options, and `project = "this"` means the page the list sits on. It also reads any filter this browser remembers for that page and id. The next section covers the filter.
+[`tl.focus`](throughline.lua#L2337) builds the list when the page renders. It starts from the widget's options, and `project = "this"` means the page the list sits on. It also reads any filter this browser remembers for that page and id. The next section covers the filter.
 
-[`focusTasks`](throughline.lua#L1814) collects the tasks. It reads every task in the index, then drops tasks on `Library/` pages and closed tasks. A task on a task page stays only when it is the page's source task or has a date, so undated subtasks stay off the list. It also returns `sourceOf`, a map from each task page to its source task.
+[`focusTasks`](throughline.lua#L1855) collects the tasks. It reads every task in the index, then drops tasks on `Library/` pages and closed tasks. A task on a task page stays only when it is the page's source task or has a date, so undated subtasks stay off the list. It also returns `sourceOf`, a map from each task page to its source task.
 
-[`focusSection`](throughline.lua#L1798) picks the one section a task belongs to. It checks in this order:
+[`focusSection`](throughline.lua#L1839) picks the one section a task belongs to. It checks in this order:
 
 1. Overdue, when the due or scheduled date is before today.
 2. Doing, when the task's category is `active`.
@@ -411,33 +411,33 @@ The Focus list shows every open task in your space, sorted into sections: Overdu
 6. Backlog, when the category is `backlog`.
 7. Later, for everything else.
 
-Dates come before the category check at step 6, so a backlog task that is due still appears. The section list and its labels are in [`focusSections`](throughline.lua#L1781). Backlog and Later start folded. [`earliest`](throughline.lua#L1791) returns the earlier of two optional dates. It is how a task gets one date from its due and scheduled fields.
+Dates come before the category check at step 6, so a backlog task that is due still appears. The section list and its labels are in [`focusSections`](throughline.lua#L1822). Backlog and Later start folded. [`earliest`](throughline.lua#L1832) returns the earlier of two optional dates. It is how a task gets one date from its due and scheduled fields.
 
-[`focusProjectOf`](throughline.lua#L2123) names the project a row belongs to. It takes the first project the task links to. If there is none, it takes the project page the task sits on. For a subtask on a task page, it takes the project that the page's source task links to.
+[`focusProjectOf`](throughline.lua#L2165) names the project a row belongs to. It takes the first project the task links to. If there is none, it takes the project page the task sits on. For a subtask on a task page, it takes the project that the page's source task links to.
 
-[`focusRow`](throughline.lua#L2138) builds one row. It adds chips for the project, for the page the task is on, and for the dates. A task page's own task gets no page chip. Each row carries its filter values as `data-` attributes, so filtering never reads the index again. The icon calls [`tl.pickRowState`](throughline.lua#L1900) and stops the click there. The title opens the task page for a source task, and the task's line for any other task.
+[`focusRow`](throughline.lua#L2191) builds one row. It adds chips for the project, for the page the task is on, and for the dates. A task page's own task gets no page chip. Each row carries its filter values as `data-` attributes, so filtering never reads the index again. The icon calls [`tl.pickRowState`](throughline.lua#L1941) and stops the click there. Icon and title can take keyboard focus, and [`onActivate`](throughline.lua#L2180) makes Enter and Space act as a click. The title opens the task page for a source task, and the task's line for any other task.
 
-Inside each section, `tl.focus` sorts rows in three steps. Active tasks come first. Then the earlier date comes first, with undated tasks last. Then the plain task name decides. [`focusSectionNode`](throughline.lua#L2186) wraps a section in a `<details>` element. The element is open unless the section is folded. An empty section is still rendered, hidden, so that a filter change can show it later.
+Inside each section, `tl.focus` sorts rows in three steps. Active tasks come first. Then the earlier date comes first, with undated tasks last. Then the plain task name decides. [`focusSectionNode`](throughline.lua#L2247) wraps a section in a `<details>` element. The element is open unless the section is folded. An empty section is still rendered, hidden, so that a filter change can show it later.
 
-Changing a state works in place. [`tl.pickRowState`](throughline.lua#L1900) opens the state picker. For a task page's own task, it calls `tl.setTaskPageState`. For any other task, it calls [`tl.setTaskStateAt`](throughline.lua#L1854) with the position stored on the row. On success, the row's icon, category and state change at once. The row stays in its section until the page reloads.
+Changing a state works in place. [`tl.pickRowState`](throughline.lua#L1941) opens the state picker. For a task page's own task, it calls `tl.setTaskPageState`. For any other task, it calls [`tl.setTaskStateAt`](throughline.lua#L1895) with the position stored on the row. On success, the row's icon, category and state change at once. The row stays in its section until the page reloads.
 
-[`tl.setTaskStateAt`](throughline.lua#L1854) checks the position first. The index can give a stale position after an earlier line on the page changes length. The check passes when the line at that position is a task line whose text contains the first 30 characters of the task's name. When the check fails, the function scans the page for the first task line that contains those characters. If it finds none, it shows an error and returns `false`. Otherwise it replaces the text inside the brackets, writes the page through `tl.write`, and clears `tl.stateMap`.
+[`tl.setTaskStateAt`](throughline.lua#L1895) checks the position first. The index can give a stale position after an earlier line on the page changes length. The check passes when the line at that position is a task line whose text contains the first 30 characters of the task's name. When the check fails, the function scans the page for the first task line that contains those characters. If it finds none, it shows an error and returns `false`. Otherwise it replaces the text inside the brackets, writes the page through `tl.write`, and clears `tl.stateMap`.
 
-The styling for the list is in the [`Focus list`](Throughline.md?plain=1#L3879) CSS block.
+The styling for the list is in the [`Focus list`](Throughline.md?plain=1#L3952) CSS block.
 
 | Piece | Code |
 | --- | --- |
-| Section keys and labels | [`focusSections`](throughline.lua#L1781) |
-| Earlier of two optional dates | [`earliest`](throughline.lua#L1791) |
-| Section for one task | [`focusSection`](throughline.lua#L1798) |
-| Open tasks and their source map | [`focusTasks`](throughline.lua#L1814) |
-| Project a row belongs to | [`focusProjectOf`](throughline.lua#L2123) |
-| One row | [`focusRow`](throughline.lua#L2138) |
-| One section, folded or open | [`focusSectionNode`](throughline.lua#L2186) |
-| The widget: sorting, filter start, output | [`tl.focus`](throughline.lua#L2276) |
-| Icon click: state picker and row update | [`tl.pickRowState`](throughline.lua#L1900) |
-| Write a state, re-checking the line | [`tl.setTaskStateAt`](throughline.lua#L1854) |
-| Focus list styles | [`Focus list`](Throughline.md?plain=1#L3879) |
+| Section keys and labels | [`focusSections`](throughline.lua#L1822) |
+| Earlier of two optional dates | [`earliest`](throughline.lua#L1832) |
+| Section for one task | [`focusSection`](throughline.lua#L1839) |
+| Open tasks and their source map | [`focusTasks`](throughline.lua#L1855) |
+| Project a row belongs to | [`focusProjectOf`](throughline.lua#L2165) |
+| One row | [`focusRow`](throughline.lua#L2191) |
+| One section, folded or open | [`focusSectionNode`](throughline.lua#L2247) |
+| The widget: sorting, filter start, output | [`tl.focus`](throughline.lua#L2337) |
+| Icon click: state picker and row update | [`tl.pickRowState`](throughline.lua#L1941) |
+| Write a state, re-checking the line | [`tl.setTaskStateAt`](throughline.lua#L1895) |
+| Focus list styles | [`Focus list`](Throughline.md?plain=1#L3952) |
 
 ## Focus filters
 
@@ -447,34 +447,34 @@ The bar above the Focus list has five dropdowns and a Reset button: project, sta
 
 ### How it works
 
-[`focusFilterBar`](throughline.lua#L2212) builds the bar from what the list holds. The project dropdown offers the projects in use, a starting project even if no open task has it, and "No project". The state dropdown offers the open states, grouped with the categories. The when dropdown has fixed choices. The tag and folder dropdowns offer only tags and folders in use. [`sortedKeys`](throughline.lua#L2202) gives those sets in alphabetical order. Each dropdown comes from [`filterSelect`](throughline.lua#L2095). Its `onchange` calls `tl.applyFocusFilter` and asks it to remember the choice.
+[`focusFilterBar`](throughline.lua#L2273) builds the bar from what the list holds. The project dropdown offers the projects in use, a starting project even if no open task has it, and "No project". The state dropdown offers the open states, grouped with the categories. The when dropdown has fixed choices. The tag and folder dropdowns offer only tags and folders in use. [`sortedKeys`](throughline.lua#L2263) gives those sets in alphabetical order. Each dropdown comes from [`filterSelect`](throughline.lua#L2136). Its `onchange` calls `tl.applyFocusFilter` and asks it to remember the choice.
 
-A filter is a table with five keys, listed in [`filterKeys`](throughline.lua#L1921). [`encodeFilter`](throughline.lua#L1923) writes it as `key=value` lines. [`decodeFilter`](throughline.lua#L1929) reads those lines back and drops empty values. The widget stores its starting filter in this form, and the browser stores the remembered one in this form.
+A filter is a table with five keys, listed in [`filterKeys`](throughline.lua#L1962). [`encodeFilter`](throughline.lua#L1964) writes it as `key=value` lines. [`decodeFilter`](throughline.lua#L1970) reads those lines back and drops empty values. The widget stores its starting filter in this form, and the browser stores the remembered one in this form.
 
-The state dropdown uses a prefix. `s:DOING` matches one state, and `c:held` matches a category. [`rowMatches`](throughline.lua#L1938) reads the prefix. The when dropdown matches words. [`whenTokens`](throughline.lua#L1839) gives each row the words it qualifies for: `overdue`, `today`, `week` (within 7 days), `month` (within 30 days), or `undated`. A task due tomorrow gets both `week` and `month`. [`rowMatches`](throughline.lua#L1938) tests every key the filter sets, and a row must pass all of them. For the source key, the folder comes from [`folderOf`](throughline.lua#L1831), which returns the top-level folder of a page, or an empty string at the top level.
+The state dropdown uses a prefix. `s:DOING` matches one state, and `c:held` matches a category. [`rowMatches`](throughline.lua#L1979) reads the prefix. The when dropdown matches words. [`whenTokens`](throughline.lua#L1880) gives each row the words it qualifies for: `overdue`, `today`, `week` (within 7 days), `month` (within 30 days), or `undated`. A task due tomorrow gets both `week` and `month`. [`rowMatches`](throughline.lua#L1979) tests every key the filter sets, and a row must pass all of them. For the source key, the folder comes from [`folderOf`](throughline.lua#L1872), which returns the top-level folder of a page, or an empty string at the top level.
 
-[`tl.applyFocusFilter`](throughline.lua#L1976) reads each dropdown into a filter table. It marks each dropdown that has a value. It hides rows that do not match, updates the count in each section and the total in the header, and hides sections with no rows. It shows the "Nothing matches" message when no row is left. When asked to remember, it stores the filter for this list.
+[`tl.applyFocusFilter`](throughline.lua#L2017) reads each dropdown into a filter table. It marks each dropdown that has a value. It hides rows that do not match, updates the count in each section and the total in the header, and hides sections with no rows. It shows the "Nothing matches" message when no row is left. When asked to remember, it stores the filter for this list.
 
-[`tl.resetFocusFilter`](throughline.lua#L2012) sets each dropdown back to its starting value, from the widget's `data-defaults`. It clears the stored filter and applies the reset without storing it again.
+[`tl.resetFocusFilter`](throughline.lua#L2053) sets each dropdown back to its starting value, from the widget's `data-defaults`. It clears the stored filter and applies the reset without storing it again.
 
 The remembered filter lives under the key `throughline.focus:` followed by the list's key. The list's key is the page name, then `#`, then the `id` option. Each page and each id keeps its own filter. [`storeGet`](throughline.lua#L171) and [`storeSet`](throughline.lua#L176) wrap the browser's client store in `pcall`. If the store fails, reading gives `nil` and writing does nothing. The filter is then simply not remembered.
 
-The widget is built before it is attached to the page. Its starting filter therefore goes on the page on the next tick. [`tl.applyPendingFilters`](throughline.lua#L2349) finds each list that has no `data-filtered` attribute, sets the attribute, and applies the filter without storing it.
+The widget is built before it is attached to the page. Its starting filter therefore goes on the page on the next tick. [`tl.applyPendingFilters`](throughline.lua#L2414) finds each list that has no `data-filtered` attribute, sets the attribute, and applies the filter without storing it.
 
 | Piece | Code |
 | --- | --- |
-| Filter keys | [`filterKeys`](throughline.lua#L1921) |
-| Filter table to text | [`encodeFilter`](throughline.lua#L1923) |
-| Text to filter table | [`decodeFilter`](throughline.lua#L1929) |
-| Date words for a row | [`whenTokens`](throughline.lua#L1839) |
-| Top-level folder of a page | [`folderOf`](throughline.lua#L1831) |
-| Whether a row passes a filter | [`rowMatches`](throughline.lua#L1938) |
-| Apply a filter to the list | [`tl.applyFocusFilter`](throughline.lua#L1976) |
-| Reset to the starting filter | [`tl.resetFocusFilter`](throughline.lua#L2012) |
-| One dropdown | [`filterSelect`](throughline.lua#L2095) |
-| Sorted keys of a set | [`sortedKeys`](throughline.lua#L2202) |
-| The whole filter bar | [`focusFilterBar`](throughline.lua#L2212) |
-| Starting filters on new lists | [`tl.applyPendingFilters`](throughline.lua#L2349) |
+| Filter keys | [`filterKeys`](throughline.lua#L1962) |
+| Filter table to text | [`encodeFilter`](throughline.lua#L1964) |
+| Text to filter table | [`decodeFilter`](throughline.lua#L1970) |
+| Date words for a row | [`whenTokens`](throughline.lua#L1880) |
+| Top-level folder of a page | [`folderOf`](throughline.lua#L1872) |
+| Whether a row passes a filter | [`rowMatches`](throughline.lua#L1979) |
+| Apply a filter to the list | [`tl.applyFocusFilter`](throughline.lua#L2017) |
+| Reset to the starting filter | [`tl.resetFocusFilter`](throughline.lua#L2053) |
+| One dropdown | [`filterSelect`](throughline.lua#L2136) |
+| Sorted keys of a set | [`sortedKeys`](throughline.lua#L2263) |
+| The whole filter bar | [`focusFilterBar`](throughline.lua#L2273) |
+| Starting filters on new lists | [`tl.applyPendingFilters`](throughline.lua#L2414) |
 | Read from the browser store | [`storeGet`](throughline.lua#L171) |
 | Write to the browser store | [`storeSet`](throughline.lua#L176) |
 
@@ -484,20 +484,20 @@ Everything in Throughline is text, so the keyboard edits the text. The helpers b
 
 ### How it works
 
-Open task. [`tl.openTaskAtCursor`](throughline.lua#L2846), on `Ctrl+.` `o` (`Cmd+.` `o` on a Mac), takes the first link into the task folder on the cursor line, with [`taskLinkOnLine`](throughline.lua#L2830). That covers a projection and a `blockedBy`. It reads the target page, finds its task line with `taskLineIn`, and opens it with `editor.navigate("<page>@<offset>")`, with the cursor just inside the state brackets. SilverBullet builds command keys into its own keymap, so the chord works in vim's normal mode too. [`taskPageAtCursor`](throughline.lua#L2836), which Delete task page uses, shares the same link parser.
+Open task. [`tl.openTaskAtCursor`](throughline.lua#L2895), on `Ctrl+.` `o` (`Cmd+.` `o` on a Mac), takes the first link into the task folder on the cursor line, with [`taskLinkOnLine`](throughline.lua#L2879). That covers a projection and a `blockedBy`. It reads the target page, finds its task line with `taskLineIn`, and opens it with `editor.navigate("<page>@<offset>")`, with the cursor just inside the state brackets. SilverBullet builds command keys into its own keymap, so the chord works in vim's normal mode too. [`taskPageAtCursor`](throughline.lua#L2885), which Delete task page uses, shares the same link parser.
 
-Snippets. `/due`, `/scheduled`, `/progress` and `/blocked` are slash commands that write the same `[key: value]` text you could type. [`taskLineAtCursor`](throughline.lua#L3044) makes sure the cursor is on a task line, and refuses a projection, whose task lives on another page. [`attrSnippet`](throughline.lua#L3061) writes the attribute at the end of the line, or over the one that is there, so an attribute never appears twice. For the dates and progress, it keeps a value that is already there and selects it with `editor.setSelection`, so typing replaces it; in vim, insert mode survives the selection. `/blocked` first opens a picker of open tasks by title, from [`openTaskRows`](throughline.lua#L649), the same list the panel's Choose… uses, and places the cursor after the link.
+Snippets. `/due`, `/scheduled`, `/progress` and `/blocked` are slash commands that write the same `[key: value]` text you could type. [`taskLineAtCursor`](throughline.lua#L3093) makes sure the cursor is on a task line, and refuses a projection, whose task lives on another page. [`attrSnippet`](throughline.lua#L3110) writes the attribute at the end of the line, or over the one that is there, so an attribute never appears twice. For the dates and progress, it keeps a value that is already there and selects it with `editor.setSelection`, so typing replaces it; in vim, insert mode survives the selection. `/blocked` first opens a picker of open tasks by title, from [`openTaskRows`](throughline.lua#L650), the same list the panel's Choose… uses, and places the cursor after the link.
 
-Filter Focus. [`tl.filterFocus`](throughline.lua#L2037) reads the filter bar of a Focus list on screen: it picks the list when there are several, then loops through two pickers, one for the filter and one for its value, until Escape. The values are the `<option>`s of the widget's own `<select>`s, and the choice is applied through `tl.applyFocusFilter`, so the remembered filter is the same one the mouse sets. A Focus list off screen is not drawn, so the command asks you to scroll to it. Nothing here runs until you call it: no key listener, no tick and no render work.
+Filter Focus. [`tl.filterFocus`](throughline.lua#L2078) reads the filter bar of a Focus list on screen: it picks the list when there are several, then loops through two pickers, one for the filter and one for its value, until Escape. The values are the `<option>`s of the widget's own `<select>`s, and the choice is applied through `tl.applyFocusFilter`, so the remembered filter is the same one the mouse sets. A Focus list off screen is not drawn, so the command asks you to scroll to it. Nothing here runs until you call it: no key listener, no tick and no render work.
 
 | Piece | Code |
 | --- | --- |
-| Open the task on this line | [`tl.openTaskAtCursor`](throughline.lua#L2846) |
-| The task link on a line | [`taskLinkOnLine`](throughline.lua#L2830) |
-| The cursor line, if it is a task line | [`taskLineAtCursor`](throughline.lua#L3044) |
-| Writing an attribute | [`attrSnippet`](throughline.lua#L3061) |
-| Open tasks for a blocker picker | [`openTaskRows`](throughline.lua#L649) |
-| Focus filters from the palette | [`tl.filterFocus`](throughline.lua#L2037) |
+| Open the task on this line | [`tl.openTaskAtCursor`](throughline.lua#L2895) |
+| The task link on a line | [`taskLinkOnLine`](throughline.lua#L2879) |
+| The cursor line, if it is a task line | [`taskLineAtCursor`](throughline.lua#L3093) |
+| Writing an attribute | [`attrSnippet`](throughline.lua#L3110) |
+| Open tasks for a blocker picker | [`openTaskRows`](throughline.lua#L650) |
+| Focus filters from the palette | [`tl.filterFocus`](throughline.lua#L2078) |
 
 ## Settings and themes
 
@@ -513,11 +513,11 @@ The state list also feeds the editor. The [loop after the getters](throughline.l
 
 The getters, [`tl.taskFolder`](throughline.lua#L114) and the others on lines 134 to 140, read each setting with `config.get` and a fallback. The rest of the code calls the getters, not the setting keys.
 
-[`tl.applyTheme`](throughline.lua#L2669) copies the theme setting onto the `<html>` element as `data-tl-theme`. It runs once when the file loads and again on every tick. The stylesheet keys every theme off that attribute, and it changes nothing when the value is already right.
+[`tl.applyTheme`](throughline.lua#L2718) copies the theme setting onto the `<html>` element as `data-tl-theme`. It runs once when the file loads and again on every tick. The stylesheet keys every theme off that attribute, and it changes nothing when the value is already right.
 
-The stylesheet's map comment, at the top of the `space-style` block, lists its parts and says the theme rules sit below the lineish rules. [Tokens](Throughline.md?plain=1#L3218) define the colours and font as `--tl-*` variables on `html`. A second block redefines them for SilverBullet's dark mode under `html[data-theme="dark"]`. The lineish theme uses these values as they are.
+The stylesheet's map comment, at the top of the `space-style` block, lists its parts and says the theme rules sit below the lineish rules. [Tokens](Throughline.md?plain=1#L3267) define the colours and font as `--tl-*` variables on `html`. A second block redefines them for SilverBullet's dark mode under `html[data-theme="dark"]`. The lineish theme uses these values as they are.
 
-[Theme: native](Throughline.md?plain=1#L4147) replaces the tokens with SilverBullet's own variables, such as `--editor-font`, `--root-color` and `--ui-accent-color`. So the native theme takes SilverBullet's font and colours. It also removes the shadows and panel backgrounds. It draws rules as dotted lines, makes buttons SilverBullet's own, and leaves board columns open under a heading.
+[Theme: native](Throughline.md?plain=1#L4316) replaces the tokens with SilverBullet's own variables, such as `--ui-font`, `--root-color` and `--ui-accent-color`, and mixes the lines and panel backgrounds out of them with `color-mix`. So the native theme is the same design in the colours of whatever SilverBullet theme is in use, with SilverBullet's own buttons. Above it, [Keyboard, touch and small screens](Throughline.md?plain=1#L4257) holds the focus rings, the larger touch targets, and the phone layout: a board that scrolls one column at a time, Focus rows on two lines, and the task panel as a sheet at the bottom of the screen.
 
 <p>
 <img src="docs/lineish-projects.png" alt="The lineish theme" width="49%">
@@ -536,10 +536,10 @@ The stylesheet's map comment, at the top of the `space-style` block, lists its p
 | Theme setting | [`config.define`](throughline.lua#L49) |
 | Registering custom states with the editor | [loop after the getters](throughline.lua#L123) |
 | Getters for each setting | [`tl.taskFolder`](throughline.lua#L114) |
-| Copy the theme to `<html>` | [`tl.applyTheme`](throughline.lua#L2669) |
-| Stylesheet map | [stylesheet map](Throughline.md?plain=1#L3201) |
-| Colour and font tokens | [`Tokens`](Throughline.md?plain=1#L3218) |
-| Native theme overrides | [`Theme: native`](Throughline.md?plain=1#L4147) |
+| Copy the theme to `<html>` | [`tl.applyTheme`](throughline.lua#L2718) |
+| Stylesheet map | [stylesheet map](Throughline.md?plain=1#L3250) |
+| Colour and font tokens | [`Tokens`](Throughline.md?plain=1#L3267) |
+| Native theme overrides | [`Theme: native`](Throughline.md?plain=1#L4316) |
 
 ## Shared machinery
 
@@ -549,7 +549,7 @@ This part is for someone reading the code. It covers the background tick, the pa
 
 The code map, at [the top of the file](throughline.lua#L3), gives the sections in the order they appear. It states two facts that most of the code follows. First, widgets are plain HTML built once, when the page renders. When the user acts in a widget, the code updates that HTML in place and writes the page. Nothing re-renders until the page reloads. Second, the index can lag behind the text. Every write therefore re-reads the page and checks the line it is about to change. The code map also says that everything public hangs off the global `throughline` table, which the file calls `tl`. Widget directives and event handlers reach the code through that table.
 
-The [`cron:secondPassed`](throughline.lua#L2689) listener runs once a second. It counts ticks in `tl.tick`. It clears `tl.stateCache`, the cache [`tl.stateTables`](throughline.lua#L309) keeps of the configured states and each state's category: the widgets ask for a state's category several times per task, and reading the configuration each time made the Focus list take most of a second to draw on a space with a few hundred tasks. On every third tick it clears `tl.stateMap`, which is the cache of task states, so the cache refreshes. Then it calls five steps. Each step runs under `pcall`, so one failure does not stop the others:
+The [`cron:secondPassed`](throughline.lua#L2738) listener runs once a second. It counts ticks in `tl.tick`. It clears `tl.stateCache`, the cache [`tl.stateTables`](throughline.lua#L309) keeps of the configured states and each state's category: the widgets ask for a state's category several times per task, and reading the configuration each time made the Focus list take most of a second to draw on a space with a few hundred tasks. On every third tick it clears `tl.stateMap`, which is the cache of task states, so the cache refreshes. Then it calls five steps. Each step runs under `pcall`, so one failure does not stop the others:
 
 - `tl.markLinks` draws each projection link's state.
 - `tl.syncWidgets` moves board cards and Focus rows whose state changed elsewhere.
@@ -559,9 +559,9 @@ The [`cron:secondPassed`](throughline.lua#L2689) listener runs once a second. It
 
 Each step writes to the page only when something differs, so the tick stays cheap.
 
-Overflow. One block of the stylesheet, [Overflow](Throughline.md?plain=1#L4072), keeps long text inside its box everywhere. Collapsed views (a card's front, a Focus row, chips, column and section heads) shorten one-line text with "…", and the element's title attribute holds the full text for hovering. Expanded views (an open card, an open project card, the task panel) wrap text instead, so everything is visible there; long words break anywhere. In a crowded Focus row the dates keep their size and the project, page and blocked-by chips give way. Two exceptions: a closed card's title stops at two lines (an open card shows all of it), and the blocking task's link in an open card or the task panel stops at three lines, with the full name in its title.
+Overflow. One block of the stylesheet, [Overflow](Throughline.md?plain=1#L4182), keeps long text inside its box everywhere. Collapsed views (a card's front, a Focus row, chips, column and section heads) shorten one-line text with "…", and the element's title attribute holds the full text for hovering. Expanded views (an open card, an open project card, the task panel) wrap text instead, so everything is visible there; long words break anywhere. In a crowded Focus row the dates keep their size and the project, page and blocked-by chips give way. Two exceptions: a closed card's title stops at two lines (an open card shows all of it), and the blocking task's link in an open card or the task panel stops at three lines, with the full name in its title.
 
-The [`editor:pageLoaded`](throughline.lua#L2661) listener calls `tl.markProjectPage` when a page opens. On a fresh client, a page's tags may not be indexed yet when it loads. The tick repeats the check for that reason. [`tl.markProjectPage`](throughline.lua#L2651) reads the page's tags. A `project` tag adds the `tl-project` class, which hides SilverBullet's linked-task panels.
+The [`editor:pageLoaded`](throughline.lua#L2710) listener calls `tl.markProjectPage` when a page opens. On a fresh client, a page's tags may not be indexed yet when it loads. The tick repeats the check for that reason. [`tl.markProjectPage`](throughline.lua#L2700) reads the page's tags. A `project` tag adds the `tl-project` class, which hides SilverBullet's linked-task panels.
 
 The helpers are small. [`splitLines`](throughline.lua#L161) splits text into lines and drops the empty string after a final newline. [`pick`](throughline.lua#L182) wraps SilverBullet's `view.pick` over a list of rows, and [`pickState`](throughline.lua#L402) builds that list from the configured states, with any extra rows at the end. [`today`](throughline.lua#L199) returns the current date as `YYYY-MM-DD`, or `0000-00-00` if the clock fails.
 
@@ -572,9 +572,9 @@ Dates are handled as day numbers. [`dayNumber`](throughline.lua#L214) gives the 
 | Piece | Code |
 | --- | --- |
 | Code map and the two facts it states | [`How this file is laid out`](throughline.lua#L3) |
-| Background tick, once a second | [`cron:secondPassed`](throughline.lua#L2689) |
-| Page-load hook | [`editor:pageLoaded`](throughline.lua#L2661) |
-| Project page class | [`tl.markProjectPage`](throughline.lua#L2651) |
+| Background tick, once a second | [`cron:secondPassed`](throughline.lua#L2738) |
+| Page-load hook | [`editor:pageLoaded`](throughline.lua#L2710) |
+| Project page class | [`tl.markProjectPage`](throughline.lua#L2700) |
 | Split text into lines | [`splitLines`](throughline.lua#L161) |
 | Picker over rows | [`pick`](throughline.lua#L182) |
 | Picker over states | [`pickState`](throughline.lua#L402) |

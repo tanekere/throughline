@@ -7,6 +7,32 @@ the same as 0.1.0.
 
 Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
 
+## Unreleased
+
+Design pass: one look for both themes, and a board that works without a mouse.
+
+- The native theme, the default, has the same cards, panels and solid
+  hairlines as lineish, in the colours of your SilverBullet theme, light or
+  dark. Widgets use the interface font; the dotted outlines are gone.
+- Chips are quiet words with an icon: a flag for due, a calendar for
+  scheduled, a barred circle for blocked by. Only overdue and today are
+  tinted. The ⚑, ▸ and ⛔ characters are no longer used in the widgets.
+- Board cards no longer repeat the project's name.
+- An open board card starts with the state buttons, so a state can be changed
+  without dragging: on a touch screen, or from the keyboard.
+- The task panel's states are an even grid, its fields line up, and the clear
+  buttons sit in a column of their own.
+- Focus: the filters are pills; Reset shows only while a filter is set. A
+  row's icon and title can be reached with Tab and pressed with Enter or
+  Space, and the icon's click area is larger.
+- Phones: the board scrolls one column at a time, Focus rows put the title
+  above its details, the filters scroll on one line, and the task panel opens
+  as a sheet at the bottom of the screen. Buttons are larger for fingers.
+- Empty states: a board column with no cards says "No tasks", and the
+  overview and the Focus list say how to start when there is nothing yet.
+- Keyboard focus shows a ring on every control; animations respect the
+  reduce-motion setting.
+
 ## 0.1.0 (2026-10-22)
 
 - Long text never spills out of a card, row, column, panel or chip. Collapsed
