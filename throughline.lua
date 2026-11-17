@@ -3077,7 +3077,7 @@ slashCommand.define {
     end
     local indent, rest = string.match(text, "^(%s*)(.-)%s*$")
     local state, body = string.match(rest, "^[-*] %[([^%]%[]*)%]%s*(.*)$")
-    if state and string.sub(body, 1, 1) == "(" then state = nil end
+    if state and string.match(rest, "^[-*] %[[^%]%[]*%]%(") then state = nil end
     if not state then
       state = " "
       body = string.match(rest, "^[-*]%s+(.*)$") or ((rest == "-" or rest == "*") and "" or rest)

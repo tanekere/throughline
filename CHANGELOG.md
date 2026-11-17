@@ -10,9 +10,10 @@ Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
 ## Unreleased
 
 - Fixed: a linked list item such as `- [[Projects/Website]] context` or
-  `- [text](url)` above a task line or subtask was treated as a task by
-  `taskLineIn`, `subtaskBlocks`, `blockAt` and `tl.setTaskStateAt`, corrupting
-  the line when changing the task's state or attributes (#2).
+  `- [text](url)` was treated as a task by `taskLineIn`, `subtaskBlocks`,
+  `blockAt`, `tl.setTaskStateAt`, `/task` and `taskLineAtCursor`, corrupting
+  the line when changing the task's state or attributes or running task
+  commands (#2).
 
 ## 0.2.0 (2026-11-17)
 
