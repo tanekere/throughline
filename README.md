@@ -117,7 +117,7 @@ task it is blocked by, or drag Progress. Every change is written to the task
 page at once, and the board on the same page follows. A task's progress is its share of done subtasks until
 you set it yourself; × goes back to that. Blocked by is written as
 `[blockedBy: [[Tasks/…]]]` on the task's line, and the board and the Focus list
-show "⛔ blocked by …", struck through once that task is finished.
+show the blocking task's name, struck through once that task is finished.
 
 **A project is a page tagged `#project`.** Its `status:` frontmatter says
 where it stands: `active`, `planned`, `paused`, `idea`, `done` or `dropped`. A
@@ -151,7 +151,7 @@ ${throughline.board()}
 
 Put this on a project page. There is one column per open state, with Planned
 and Backlog sharing To do and Waiting and Blocked sharing On hold, and a folded
-Done column. Each card is one of the project's task pages. Expand a card to set
+Done column. Each card is one of the project's task pages. Expand a card to change its state and set
 its dates, its blocker and its progress; View full task opens the task page with
 its notes and subtasks. A closed card's title shows at most two lines; open, the
 card shows it in full.
@@ -290,7 +290,7 @@ Run Configuration: Open and find the Throughline section.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Theme | native | native follows your SilverBullet theme: its font and colours, no backgrounds, dotted lines. lineish is a card-and-panel look after Linear |
+| Theme | native | native follows your SilverBullet theme: the same cards and panels, in its colours, light or dark. lineish has a palette of its own, after Linear |
 | Task folder | `Tasks/` | where task pages go |
 | Project folder | `Projects/` | where New project puts projects |
 | Update cadence (days) | 7 | when an active project's health goes stale; twice this and it says Update missing |
@@ -343,8 +343,8 @@ icons; any other state shows as its name.
 - Projection icons are drawn in the editor only, not in the page picker or in
   completion.
 - When you delete a task page, the server only learns of it at the next sync.
-- Drag and drop needs a mouse. On touch screens, change a task's state from the
-  task list.
+- Drag and drop needs a mouse. On touch screens, open a card and press a state,
+  or change it from the task list.
 
 ## Development
 

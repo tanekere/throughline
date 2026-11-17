@@ -104,7 +104,7 @@ config.define("throughline.upcomingDays", {
 })
 
 config.define("throughline.theme", {
-  description = "How the widgets look: native (SilverBullet's own colours and font, dotted lines) or lineish (cards and panels in the style of Linear).",
+  description = "How the widgets look: native (cards and panels in your SilverBullet theme's colours) or lineish (a palette of its own, in the style of Linear).",
   type = "string",
   enum = { "native", "lineish" },
   default = "native",
@@ -625,8 +625,9 @@ local function progressChip(pct)
   }
 end
 
--- "⛔ blocked by <task>" for a task whose `blockedBy` names another task
--- page; struck through once that task is finished.
+-- The "blocked by <task>" chip for a task whose `blockedBy` names another
+-- task page; struck through once that task is finished. The stylesheet draws
+-- its icon.
 local function blockedChip(blocker)
   blocker = linkTarget(blocker)
   if not blocker then return nil end
@@ -635,7 +636,7 @@ local function blockedChip(blocker)
   return dom.span {
     class = done and "tl-chip tl-blocked tl-unblocked" or "tl-chip tl-blocked",
     title = "Blocked by " .. blocker .. (done and " (finished)" or ""),
-    "⛔ " .. tl.titleOf(blocker),
+    tl.titleOf(blocker),
   }
 end
 
@@ -655,6 +656,40 @@ local function openTaskRows(except)
   end
   table.sort(rows, function(a, b) return a.name < b.name end)
   return rows
+end
+
+-- One button per configured state, the current one marked. Used by the task
+-- panel and by an open board card, where it is the way to change a state
+-- without dragging (touch screens, keyboards). `onPick(state)` does the
+-- writing.
+local function stateButtons(current, onPick)
+  local buttons = {}
+  for _, st in ipairs(tl.states()) do
+    local state = st.state
+    table.insert(buttons, dom.button {
+      class = state == current and "tl-pop-state tl-on" or "tl-pop-state",
+      title = st.label,
+      ["data-state"] = state,
+      onclick = function(e)
+        e.preventDefault()
+        onPick(state)
+        tl.markStateButtons(e.target.closest(".tl-pop-states"), state)
+      end,
+      dom.span { class = "tl-icon", ["data-tl-state"] = shownState(state) },
+      st.label,
+    })
+  end
+  return dom.div { class = "tl-pop-states", role = "group", ["aria-label"] = "State", table.unpack(buttons) }
+end
+
+-- Mark `state` as the current one among the state buttons inside `el`.
+function tl.markStateButtons(el, state)
+  if not el then return end
+  local bs = el.querySelectorAll(".tl-pop-state")
+  for i = 0, bs.length - 1 do
+    local b = bs.item(i)
+    if b.getAttribute("data-state") == state then b.classList.add("tl-on") else b.classList.remove("tl-on") end
+  end
 end
 
 local function attrForm(page, attrs, subs, onChange)
@@ -785,22 +820,23 @@ end
 -- its projections; dragging a card rewrites that list.
 ---------------------------------------------------------------------------
 
--- The ⚑ due and ▸ scheduled chips of a task, red when past and amber when
--- today, unless the task is finished. Shared with the Focus list.
+-- The due and scheduled chips of a task, red when past and amber when today,
+-- unless the task is finished. The stylesheet draws a flag before a due date
+-- and a calendar before a scheduled one. Shared with the Focus list.
 local function dateChips(t, now)
   local closed = isClosed(t)
   local chips = {}
-  local function chip(date, mark, what)
+  local function chip(date, what)
     if not date then return end
     date = tostring(date)
-    local cls = "tl-chip"
+    local cls = "tl-chip tl-d-" .. what
     if not closed and date < now then cls = cls .. " tl-overdue"
     elseif not closed and date == now then cls = cls .. " tl-today" end
     local text = date == now and "Today" or shortDate(date)
-    table.insert(chips, dom.span { class = cls, title = what .. " " .. date, mark .. " " .. text })
+    table.insert(chips, dom.span { class = cls, title = what .. " " .. date, text })
   end
-  chip(t.due, "⚑", "due")
-  chip(t.scheduled, "▸", "scheduled")
+  chip(t.due, "due")
+  chip(t.scheduled, "scheduled")
   return chips
 end
 
@@ -827,13 +863,10 @@ local function subtasksByPage()
   return by
 end
 
--- The chips under a card's title: project, dates, progress, blocked by.
+-- The chips under a card's title: dates, progress, blocked by. The project
+-- is not among them: every card on a board belongs to the board's project.
 local function cardChips(t, now, subs)
   local chips = {}
-  local proj = projectOf(t)
-  if proj then
-    table.insert(chips, dom.span { class = "tl-chip", title = proj, basename(proj) })
-  end
   for _, c in ipairs(dateChips(t, now)) do table.insert(chips, c) end
   local pct = taskProgress(t.progress, subs)
   if pct then table.insert(chips, progressChip(pct)) end
@@ -843,7 +876,7 @@ local function cardChips(t, now, subs)
 end
 
 -- A board card for source task `t`, with its subtasks `subs`. Open, it shows
--- the task's dates, blocker and progress, and a button to the task page; the
+-- the task's state, dates, blocker and progress, and a button to the task page; the
 -- task's notes and subtasks stay on that page. The form is built the first
 -- time the card opens, so drawing a board reads no task page.
 local function card(t, now, subs)
@@ -865,6 +898,11 @@ local function card(t, now, subs)
       if filled or not e.target.open then return end
       filled = true
       local slot = e.target.querySelector(".tl-card-notes")
+      -- the state, for changing it without a drag: the card moves at once
+      slot.appendChild(stateButtons(e.target.getAttribute("data-state"), function(state)
+        tl.moveCard(page, state)
+        tl.refreshStates()
+      end))
       -- after a date or progress change, redraw the card's chips in place
       slot.appendChild(attrForm(page, tl.taskAttrs(page), subs, function()
         tl.refreshCard(page)
@@ -927,6 +965,7 @@ local function placeCard(el, state, fromCol)
   el.querySelector(".tl-icon").setAttribute("data-tl-state", shownState(state))
   el.setAttribute("data-state", state)
   el.setAttribute("data-cat", tl.categoryOf(state))
+  tl.markStateButtons(el, state)
   tl.recount(fromCol)
   tl.recount(target.closest(".tl-col"))
 end
@@ -938,14 +977,12 @@ function tl.refreshCard(page)
   if not el then return end
   local attrs = tl.taskAttrs(page)
   local auto = el.getAttribute("data-auto")
-  local project = el.getAttribute("data-project")
   local t = {
     page = page,
     state = el.getAttribute("data-state"),
     due = attrs.due, scheduled = attrs.scheduled,
     progress = attrs.progress or (auto ~= "" and auto or nil),
     blockedBy = attrs.blockedBy,
-    links = { project },
   }
   local span = el.querySelector(".tl-chips")
   span.innerHTML = ""
@@ -1684,6 +1721,10 @@ function tl.projects(opts)
       },
       dom.button { class = "tl-button", onclick = function() tl.newProject() end, "New project" },
     },
+    #data == 0 and dom.div {
+      class = "tl-focus-empty",
+      "No projects yet. Press New project, or tag any page #project.",
+    } or dom.span {},
     table.unpack(nodes),
   })
 end
@@ -2112,6 +2153,7 @@ local function filterSelect(key, allLabel, options, value)
   return dom.select {
     class = value and value ~= "" and "tl-filter tl-filter-on" or "tl-filter",
     ["data-key"] = key,
+    ["aria-label"] = "Filter by " .. string.lower(FILTER_NAMES[key] or key),
     onchange = function(e) tl.applyFocusFilter(e.target.closest(".tl-focus"), true) end,
     table.unpack(opts),
   }
@@ -2133,6 +2175,17 @@ local function focusProjectOf(t, projects, sourceOf)
   end
 end
 
+-- A keydown handler that runs `fn` on Enter or Space, so a row's icon and
+-- title work from the keyboard like the buttons they are.
+local function onActivate(fn)
+  return function(e)
+    if e.key == "Enter" or e.key == " " then
+      e.preventDefault()
+      fn(e)
+    end
+  end
+end
+
 -- One Focus row. The data- attributes carry everything the filter bar
 -- matches on, so filtering never needs the index again.
 local function focusRow(t, now, ends, folder, sourceOf)
@@ -2150,6 +2203,10 @@ local function focusRow(t, now, ends, folder, sourceOf)
   local blocked = blockedChip(t.blockedBy)
   if blocked then table.insert(meta, blocked) end
   local page, pos, ref = t.page, t.pos, t.ref
+  -- a task page opens at the top; any other task at its line
+  local function open()
+    if isSource then editor.navigate(page) else editor.navigate(ref) end
+  end
   return dom.div {
     class = "tl-row",
     ["data-page"] = page,
@@ -2167,14 +2224,18 @@ local function focusRow(t, now, ends, folder, sourceOf)
       class = "tl-icon",
       ["data-tl-state"] = shownState(t.state),
       title = tl.labelOf(t.state) .. ". Click to change",
+      role = "button",
+      tabindex = "0",
+      ["aria-label"] = "Change state of " .. title,
       onclick = function(e) e.stopPropagation(); tl.pickRowState(e.target) end,
+      onkeydown = onActivate(function(e) tl.pickRowState(e.target) end),
     },
     dom.span {
       class = "tl-row-title",
-      -- a task page opens at the top; any other task at its line
-      onclick = function()
-        if isSource then editor.navigate(page) else editor.navigate(ref) end
-      end,
+      role = "link",
+      tabindex = "0",
+      onclick = open,
+      onkeydown = onActivate(open),
       title,
     },
     dom.span { class = "tl-row-meta", table.unpack(meta) },
@@ -2338,7 +2399,11 @@ function tl.focus(opts)
       dom.span { class = "tl-ptoolbar-count", tostring(total) },
     },
     focusFilterBar(used, defaults, current),
-    dom.div { class = "tl-focus-empty tl-hide", "Nothing matches. Clear a filter, or enjoy the quiet." },
+    dom.div {
+      class = "tl-focus-empty tl-hide",
+      total == 0 and "No open tasks. Write one on any page, - [ ] like this, or type /task."
+        or "Nothing matches. Clear a filter, or enjoy the quiet.",
+    },
     table.unpack(nodes),
   })
 end
@@ -2472,31 +2537,15 @@ end
 
 function tl.openTaskPopover(page, anchor)
   tl.closePopover()
-  local current = tl.stateOf(page)
-  local buttons = {}
-  local function mark(state)
-    for _, b in ipairs(buttons) do
-      if b.getAttribute("data-state") == state then b.classList.add("tl-on") else b.classList.remove("tl-on") end
-    end
-  end
-  for _, st in ipairs(tl.states()) do
-    local state = st.state
-    table.insert(buttons, dom.button {
-      class = state == current and "tl-pop-state tl-on" or "tl-pop-state",
-      title = st.label,
-      ["data-state"] = state,
-      onclick = function()
-        tl.setTaskPageState(page, state)
-        mark(state)
-        tl.refreshStates()
-      end,
-      dom.span { class = "tl-icon", ["data-tl-state"] = shownState(state) },
-      st.label,
-    })
-  end
+  local states = stateButtons(tl.stateOf(page), function(state)
+    tl.setTaskPageState(page, state)
+    tl.refreshStates()
+  end)
   local subs = subtasksByPage()[page]
   local pop = dom.div {
     class = "tl-pop",
+    role = "dialog",
+    ["aria-label"] = "Edit task",
     dom.div {
       class = "tl-pop-head",
       dom.a {
@@ -2506,7 +2555,7 @@ function tl.openTaskPopover(page, anchor)
         tl.titleOf(page),
       },
     },
-    dom.div { class = "tl-pop-states", table.unpack(buttons) },
+    states,
     attrForm(page, tl.taskAttrs(page), subs, function()
       tl.refreshCard(page)
       tl.refreshStates()

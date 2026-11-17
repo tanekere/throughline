@@ -65,7 +65,7 @@ About five minutes, on any space.
 4. **Set dates, a blocker and progress.** Under the board, the project's task
    list shows each task as a link. Click a task's icon to open its panel: pick
    a state, set a due date with the calendar, choose the task it is blocked
-   by, or drag Progress. Open a card on the board for the same fields. From
+   by, or drag Progress. Open a card on the board for the same state buttons and fields. From
    the keyboard, type `/due`, `/scheduled`, `/blocked` or `/progress` on the
    task's line instead.
 
@@ -192,7 +192,7 @@ config.define("throughline.upcomingDays", {
 })
 
 config.define("throughline.theme", {
-  description = "How the widgets look: native (SilverBullet's own colours and font, dotted lines) or lineish (cards and panels in the style of Linear).",
+  description = "How the widgets look: native (cards and panels in your SilverBullet theme's colours) or lineish (a palette of its own, in the style of Linear).",
   type = "string",
   enum = { "native", "lineish" },
   default = "native",
@@ -713,8 +713,9 @@ local function progressChip(pct)
   }
 end
 
--- "⛔ blocked by <task>" for a task whose `blockedBy` names another task
--- page; struck through once that task is finished.
+-- The "blocked by <task>" chip for a task whose `blockedBy` names another
+-- task page; struck through once that task is finished. The stylesheet draws
+-- its icon.
 local function blockedChip(blocker)
   blocker = linkTarget(blocker)
   if not blocker then return nil end
@@ -723,7 +724,7 @@ local function blockedChip(blocker)
   return dom.span {
     class = done and "tl-chip tl-blocked tl-unblocked" or "tl-chip tl-blocked",
     title = "Blocked by " .. blocker .. (done and " (finished)" or ""),
-    "⛔ " .. tl.titleOf(blocker),
+    tl.titleOf(blocker),
   }
 end
 
@@ -743,6 +744,40 @@ local function openTaskRows(except)
   end
   table.sort(rows, function(a, b) return a.name < b.name end)
   return rows
+end
+
+-- One button per configured state, the current one marked. Used by the task
+-- panel and by an open board card, where it is the way to change a state
+-- without dragging (touch screens, keyboards). `onPick(state)` does the
+-- writing.
+local function stateButtons(current, onPick)
+  local buttons = {}
+  for _, st in ipairs(tl.states()) do
+    local state = st.state
+    table.insert(buttons, dom.button {
+      class = state == current and "tl-pop-state tl-on" or "tl-pop-state",
+      title = st.label,
+      ["data-state"] = state,
+      onclick = function(e)
+        e.preventDefault()
+        onPick(state)
+        tl.markStateButtons(e.target.closest(".tl-pop-states"), state)
+      end,
+      dom.span { class = "tl-icon", ["data-tl-state"] = shownState(state) },
+      st.label,
+    })
+  end
+  return dom.div { class = "tl-pop-states", role = "group", ["aria-label"] = "State", table.unpack(buttons) }
+end
+
+-- Mark `state` as the current one among the state buttons inside `el`.
+function tl.markStateButtons(el, state)
+  if not el then return end
+  local bs = el.querySelectorAll(".tl-pop-state")
+  for i = 0, bs.length - 1 do
+    local b = bs.item(i)
+    if b.getAttribute("data-state") == state then b.classList.add("tl-on") else b.classList.remove("tl-on") end
+  end
 end
 
 local function attrForm(page, attrs, subs, onChange)
@@ -873,22 +908,23 @@ end
 -- its projections; dragging a card rewrites that list.
 ---------------------------------------------------------------------------
 
--- The ⚑ due and ▸ scheduled chips of a task, red when past and amber when
--- today, unless the task is finished. Shared with the Focus list.
+-- The due and scheduled chips of a task, red when past and amber when today,
+-- unless the task is finished. The stylesheet draws a flag before a due date
+-- and a calendar before a scheduled one. Shared with the Focus list.
 local function dateChips(t, now)
   local closed = isClosed(t)
   local chips = {}
-  local function chip(date, mark, what)
+  local function chip(date, what)
     if not date then return end
     date = tostring(date)
-    local cls = "tl-chip"
+    local cls = "tl-chip tl-d-" .. what
     if not closed and date < now then cls = cls .. " tl-overdue"
     elseif not closed and date == now then cls = cls .. " tl-today" end
     local text = date == now and "Today" or shortDate(date)
-    table.insert(chips, dom.span { class = cls, title = what .. " " .. date, mark .. " " .. text })
+    table.insert(chips, dom.span { class = cls, title = what .. " " .. date, text })
   end
-  chip(t.due, "⚑", "due")
-  chip(t.scheduled, "▸", "scheduled")
+  chip(t.due, "due")
+  chip(t.scheduled, "scheduled")
   return chips
 end
 
@@ -915,13 +951,10 @@ local function subtasksByPage()
   return by
 end
 
--- The chips under a card's title: project, dates, progress, blocked by.
+-- The chips under a card's title: dates, progress, blocked by. The project
+-- is not among them: every card on a board belongs to the board's project.
 local function cardChips(t, now, subs)
   local chips = {}
-  local proj = projectOf(t)
-  if proj then
-    table.insert(chips, dom.span { class = "tl-chip", title = proj, basename(proj) })
-  end
   for _, c in ipairs(dateChips(t, now)) do table.insert(chips, c) end
   local pct = taskProgress(t.progress, subs)
   if pct then table.insert(chips, progressChip(pct)) end
@@ -931,7 +964,7 @@ local function cardChips(t, now, subs)
 end
 
 -- A board card for source task `t`, with its subtasks `subs`. Open, it shows
--- the task's dates, blocker and progress, and a button to the task page; the
+-- the task's state, dates, blocker and progress, and a button to the task page; the
 -- task's notes and subtasks stay on that page. The form is built the first
 -- time the card opens, so drawing a board reads no task page.
 local function card(t, now, subs)
@@ -953,6 +986,11 @@ local function card(t, now, subs)
       if filled or not e.target.open then return end
       filled = true
       local slot = e.target.querySelector(".tl-card-notes")
+      -- the state, for changing it without a drag: the card moves at once
+      slot.appendChild(stateButtons(e.target.getAttribute("data-state"), function(state)
+        tl.moveCard(page, state)
+        tl.refreshStates()
+      end))
       -- after a date or progress change, redraw the card's chips in place
       slot.appendChild(attrForm(page, tl.taskAttrs(page), subs, function()
         tl.refreshCard(page)
@@ -1015,6 +1053,7 @@ local function placeCard(el, state, fromCol)
   el.querySelector(".tl-icon").setAttribute("data-tl-state", shownState(state))
   el.setAttribute("data-state", state)
   el.setAttribute("data-cat", tl.categoryOf(state))
+  tl.markStateButtons(el, state)
   tl.recount(fromCol)
   tl.recount(target.closest(".tl-col"))
 end
@@ -1026,14 +1065,12 @@ function tl.refreshCard(page)
   if not el then return end
   local attrs = tl.taskAttrs(page)
   local auto = el.getAttribute("data-auto")
-  local project = el.getAttribute("data-project")
   local t = {
     page = page,
     state = el.getAttribute("data-state"),
     due = attrs.due, scheduled = attrs.scheduled,
     progress = attrs.progress or (auto ~= "" and auto or nil),
     blockedBy = attrs.blockedBy,
-    links = { project },
   }
   local span = el.querySelector(".tl-chips")
   span.innerHTML = ""
@@ -1772,6 +1809,10 @@ function tl.projects(opts)
       },
       dom.button { class = "tl-button", onclick = function() tl.newProject() end, "New project" },
     },
+    #data == 0 and dom.div {
+      class = "tl-focus-empty",
+      "No projects yet. Press New project, or tag any page #project.",
+    } or dom.span {},
     table.unpack(nodes),
   })
 end
@@ -2200,6 +2241,7 @@ local function filterSelect(key, allLabel, options, value)
   return dom.select {
     class = value and value ~= "" and "tl-filter tl-filter-on" or "tl-filter",
     ["data-key"] = key,
+    ["aria-label"] = "Filter by " .. string.lower(FILTER_NAMES[key] or key),
     onchange = function(e) tl.applyFocusFilter(e.target.closest(".tl-focus"), true) end,
     table.unpack(opts),
   }
@@ -2221,6 +2263,17 @@ local function focusProjectOf(t, projects, sourceOf)
   end
 end
 
+-- A keydown handler that runs `fn` on Enter or Space, so a row's icon and
+-- title work from the keyboard like the buttons they are.
+local function onActivate(fn)
+  return function(e)
+    if e.key == "Enter" or e.key == " " then
+      e.preventDefault()
+      fn(e)
+    end
+  end
+end
+
 -- One Focus row. The data- attributes carry everything the filter bar
 -- matches on, so filtering never needs the index again.
 local function focusRow(t, now, ends, folder, sourceOf)
@@ -2238,6 +2291,10 @@ local function focusRow(t, now, ends, folder, sourceOf)
   local blocked = blockedChip(t.blockedBy)
   if blocked then table.insert(meta, blocked) end
   local page, pos, ref = t.page, t.pos, t.ref
+  -- a task page opens at the top; any other task at its line
+  local function open()
+    if isSource then editor.navigate(page) else editor.navigate(ref) end
+  end
   return dom.div {
     class = "tl-row",
     ["data-page"] = page,
@@ -2255,14 +2312,18 @@ local function focusRow(t, now, ends, folder, sourceOf)
       class = "tl-icon",
       ["data-tl-state"] = shownState(t.state),
       title = tl.labelOf(t.state) .. ". Click to change",
+      role = "button",
+      tabindex = "0",
+      ["aria-label"] = "Change state of " .. title,
       onclick = function(e) e.stopPropagation(); tl.pickRowState(e.target) end,
+      onkeydown = onActivate(function(e) tl.pickRowState(e.target) end),
     },
     dom.span {
       class = "tl-row-title",
-      -- a task page opens at the top; any other task at its line
-      onclick = function()
-        if isSource then editor.navigate(page) else editor.navigate(ref) end
-      end,
+      role = "link",
+      tabindex = "0",
+      onclick = open,
+      onkeydown = onActivate(open),
       title,
     },
     dom.span { class = "tl-row-meta", table.unpack(meta) },
@@ -2426,7 +2487,11 @@ function tl.focus(opts)
       dom.span { class = "tl-ptoolbar-count", tostring(total) },
     },
     focusFilterBar(used, defaults, current),
-    dom.div { class = "tl-focus-empty tl-hide", "Nothing matches. Clear a filter, or enjoy the quiet." },
+    dom.div {
+      class = "tl-focus-empty tl-hide",
+      total == 0 and "No open tasks. Write one on any page, - [ ] like this, or type /task."
+        or "Nothing matches. Clear a filter, or enjoy the quiet.",
+    },
     table.unpack(nodes),
   })
 end
@@ -2560,31 +2625,15 @@ end
 
 function tl.openTaskPopover(page, anchor)
   tl.closePopover()
-  local current = tl.stateOf(page)
-  local buttons = {}
-  local function mark(state)
-    for _, b in ipairs(buttons) do
-      if b.getAttribute("data-state") == state then b.classList.add("tl-on") else b.classList.remove("tl-on") end
-    end
-  end
-  for _, st in ipairs(tl.states()) do
-    local state = st.state
-    table.insert(buttons, dom.button {
-      class = state == current and "tl-pop-state tl-on" or "tl-pop-state",
-      title = st.label,
-      ["data-state"] = state,
-      onclick = function()
-        tl.setTaskPageState(page, state)
-        mark(state)
-        tl.refreshStates()
-      end,
-      dom.span { class = "tl-icon", ["data-tl-state"] = shownState(state) },
-      st.label,
-    })
-  end
+  local states = stateButtons(tl.stateOf(page), function(state)
+    tl.setTaskPageState(page, state)
+    tl.refreshStates()
+  end)
   local subs = subtasksByPage()[page]
   local pop = dom.div {
     class = "tl-pop",
+    role = "dialog",
+    ["aria-label"] = "Edit task",
     dom.div {
       class = "tl-pop-head",
       dom.a {
@@ -2594,7 +2643,7 @@ function tl.openTaskPopover(page, anchor)
         tl.titleOf(page),
       },
     },
-    dom.div { class = "tl-pop-states", table.unpack(buttons) },
+    states,
     attrForm(page, tl.taskAttrs(page), subs, function()
       tl.refreshCard(page)
       tl.refreshStates()
@@ -3208,12 +3257,12 @@ slashCommand.define {
    Board, Projects overview, Focus list
    Task popover      the editing panel and its form
    Overflow          how long text is shortened or wrapped, everywhere
+   Keyboard, touch and small screens
    Theme: native     overrides for the default theme
 
-   Everything above "Theme: native" is the lineish theme. native keeps its
-   layout and replaces colours, backgrounds and borders; it applies when
-   <html> has data-tl-theme="native", which the Lua sets from the theme
-   setting. */
+   Everything above "Theme: native" is the lineish theme. native has the same
+   layout and shapes, in SilverBullet's own colours; it applies when <html>
+   has data-tl-theme="native", which the Lua sets from the theme setting. */
 
 /* ---- Tokens ------------------------------------------------------------- */
 html {
@@ -3481,13 +3530,15 @@ html[data-theme="dark"] {
   color: var(--tl-ink);
   -webkit-font-smoothing: antialiased;
 }
-:is(.tl-board, .tl-projects, .tl-focus) p { margin: 0; display: inline; }
+:is(.tl-board, .tl-projects, .tl-focus, .tl-pop, .tl-taskbar) p { margin: 0; display: inline; }
 :is(.tl-board, .tl-projects, .tl-focus) :is(button, select, option) { font-family: var(--tl-font) !important; }
 .tl-count {
   color: var(--tl-muted);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+/* A chip is a word with an icon: quiet, so a list of them stays readable.
+   Only the two that ask for attention, overdue and today, are tinted pills. */
 .tl-chip {
   display: inline-flex;
   align-items: center;
@@ -3495,15 +3546,25 @@ html[data-theme="dark"] {
   font-size: 12px;
   line-height: 18px;
   color: var(--tl-muted);
-  border: 1px solid var(--tl-line);
-  background: var(--tl-surface);
   border-radius: 999px;
-  padding: 0 7px;
   white-space: nowrap;
 }
-.tl-overdue { color: var(--tl-red); border-color: transparent; background: var(--tl-overdue-bg); font-weight: 550; }
-.tl-today { color: #a36c00; border-color: transparent; background: var(--tl-today-bg); font-weight: 550; }
+.tl-overdue { color: var(--tl-red); background: var(--tl-overdue-bg); padding: 0 7px; font-weight: 550; }
+.tl-today { color: #a36c00; background: var(--tl-today-bg); padding: 0 7px; font-weight: 550; }
 html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
+/* the icons of the date and blocked-by chips, in the chip's own colour */
+:is(.tl-d-due, .tl-d-scheduled, .tl-blocked)::before {
+  content: "";
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  -webkit-mask: var(--tl-i) center / contain no-repeat;
+          mask: var(--tl-i) center / contain no-repeat;
+}
+.tl-d-due { --tl-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 14.2V2.6M3.5 3.2h8.6l-2 2.7 2 2.7H3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.tl-d-scheduled { --tl-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2.3' y='3.4' width='11.4' height='10.2' rx='2.2' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cpath d='M2.6 6.9h10.8M5.4 1.9v2.6M10.6 1.9v2.6' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.tl-blocked { --tl-i: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5.9' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M3.9 12.1l8.2-8.2' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E"); }
 .tl-button {
   font: inherit;
   font-size: 12px;
@@ -3656,7 +3717,19 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   border-radius: 8px;
   cursor: pointer;
 }
+.tl-newtask::before { content: "+ "; }
 .tl-newtask:hover { color: var(--tl-ink); border-color: var(--tl-muted); }
+/* a column with no cards says so, and shows where a card can be dropped */
+.tl-col:not(.tl-col-closed) .tl-cards:empty::after {
+  content: "No tasks";
+  display: block;
+  padding: 12px 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--tl-faint);
+  border: 1px dashed var(--tl-line);
+  border-radius: 8px;
+}
 
 /* SilverBullet draws a border round the element holding a widget. The board
    and the overview are wider than the text column, so only slivers of that
@@ -3885,23 +3958,33 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   align-items: center;
   margin-bottom: 10px;
 }
+/* the filters are the browser's own dropdowns, drawn as quiet pills with one
+   chevron; a filter that is set takes the accent colour */
 .tl-filter {
+  -webkit-appearance: none;
+          appearance: none;
   font: inherit;
   font-size: 12px;
+  line-height: 18px;
   color: var(--tl-ink-2);
-  background: var(--tl-surface);
+  background: var(--tl-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.8l3 3 3-3' fill='none' stroke='%238a8f98' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 8px center / 9px no-repeat;
   border: 1px solid var(--tl-line-strong);
-  border-radius: 6px;
-  padding: 3px 6px;
+  border-radius: 999px;
+  padding: 2px 24px 2px 10px;
   cursor: pointer;
   max-width: 12em;
+  text-overflow: ellipsis;
 }
-.tl-filter:hover { background: var(--tl-hover); }
+.tl-filter:hover { background-color: var(--tl-hover); }
 .tl-filter-on {
   border-color: var(--tl-accent);
   color: var(--tl-accent);
-  background: rgba(94, 106, 210, 0.08);
+  background-color: color-mix(in srgb, var(--tl-accent) 9%, var(--tl-surface));
+  font-weight: 550;
 }
+/* Reset sits at the end of the bar, and only shows while a filter is set */
+.tl-reset { margin-left: auto; visibility: hidden; }
+.tl-filterbar:has(.tl-filter-on) .tl-reset { visibility: visible; }
 .tl-focus-empty {
   color: var(--tl-muted);
   font-size: 13px;
@@ -3962,13 +4045,11 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   background: var(--tl-violet);
   opacity: 0.8;
 }
-.tl-src { border-style: dashed; }
+.tl-src { color: var(--tl-faint); }
 .tl-row-closed .tl-row-title { text-decoration: line-through; color: var(--tl-muted); }
-@media (max-width: 640px) {
-  .tl-row { flex-wrap: wrap; padding: 6px 12px; gap: 6px 10px; }
-  .tl-row-title { flex-basis: calc(100% - 2em); white-space: normal; }
-  .tl-row-meta { padding-left: 1.7em; flex-wrap: wrap; }
-}
+/* the icon is small; its click area is not */
+.tl-row .tl-icon::after { content: ""; position: absolute; inset: -10px; }
+.tl-row-title:hover { text-decoration: underline; text-decoration-color: var(--tl-line-strong); text-underline-offset: 3px; }
 
 /* ---- Task popover and attribute form ------------------------------------
    The popover opens from a projection's icon; the same form sits in an
@@ -4003,28 +4084,49 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
 .tl-pop-head { margin-bottom: 8px; }
 .tl-pop-title { font-weight: 600; color: var(--tl-ink); text-decoration: none; }
 .tl-pop-title:hover { text-decoration: underline; }
-.tl-pop-states { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+/* the states: an even grid of buttons, in the panel and in an open card */
+.tl-pop-states {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 4px;
+  margin-bottom: 10px;
+}
 .tl-pop-state {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
   font: inherit;
   font-size: 12px;
+  line-height: 18px;
+  text-align: left;
   color: var(--tl-ink-2);
   background: transparent;
   border: 1px solid var(--tl-line);
   border-radius: 6px;
-  padding: 2px 7px;
+  padding: 3px 8px;
   cursor: pointer;
 }
 .tl-pop-state:hover { background: var(--tl-hover); }
-.tl-pop-state.tl-on { border-color: var(--tl-accent); color: var(--tl-accent); }
+.tl-pop-state.tl-on {
+  border-color: var(--tl-accent);
+  color: var(--tl-accent);
+  background: color-mix(in srgb, var(--tl-accent) 9%, transparent);
+  font-weight: 550;
+}
 .tl-pop-state .tl-icon { font-size: 12px; }
 .tl-pop-foot { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
 
 .tl-attrs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.tl-attr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; }
-.tl-attr-label { width: 6.5em; flex: none; color: var(--tl-muted); white-space: nowrap; }
+/* label, field, an optional extra, and the clear button in a column of its own */
+.tl-attr {
+  display: grid;
+  grid-template-columns: 5.8em minmax(0, 1fr) auto 1.9em;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+.tl-attr-label { color: var(--tl-muted); white-space: nowrap; }
 .tl-date {
   font: inherit;
   color: var(--tl-ink);
@@ -4034,20 +4136,28 @@ html[data-theme="dark"] .tl-today { color: var(--tl-amber); }
   padding: 2px 6px;
   color-scheme: light dark;
 }
-.tl-range { flex: 1; min-width: 6em; accent-color: var(--tl-accent); }
+.tl-range { accent-color: var(--tl-accent); }
+.tl-attr > .tl-date { justify-self: start; }
+.tl-attr > .tl-range { width: 100%; }
 .tl-attr-value { color: var(--tl-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tl-attr-clear {
   font: inherit;
-  color: var(--tl-faint);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--tl-muted);
   background: transparent;
   border: none;
-  padding: 0 4px;
+  border-radius: 4px;
+  padding: 3px 0;
+  grid-column: 4;
   cursor: pointer;
 }
 .tl-attr-clear:hover { color: var(--tl-red); }
-.tl-card-notes .tl-attrs { padding-bottom: 8px; border-bottom: 1px solid var(--tl-line); }
-.tl-blocker { color: var(--tl-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tl-card-notes .tl-attrs { margin-bottom: 0; }
+.tl-card-body .tl-actions { padding-top: 10px; border-top: 1px solid var(--tl-line); }
+.tl-blocker { color: var(--tl-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-blocker.tl-blocker-none { color: var(--tl-muted); cursor: default; text-decoration: none; }
+:is(.tl-card-body, .tl-pop) .tl-blocker.tl-blocker-none { display: block; white-space: nowrap; }
 .tl-attr-pick {
   font: inherit;
   font-size: 12px;
@@ -4144,157 +4254,102 @@ body.tl-project .sb-page-widget[data-view="std.linkedMentions"] { display: none;
 .tl-pop { max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; }
 .tl-pop-states { min-width: 0; }
 
+/* ---- Keyboard, touch and small screens ---------------------------------- */
+
+/* whatever the keyboard is on shows a ring */
+:is(.tl-board, .tl-projects, .tl-focus, .tl-pop, .tl-taskbar) :is(button, select, input, summary, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--tl-accent);
+  outline-offset: 2px;
+}
+:is(.tl-card, .tl-pcard) > summary:focus-visible { border-radius: 8px; }
+
+/* fingers need more room than a pointer */
+@media (pointer: coarse) {
+  :is(.tl-button, .tl-filter, .tl-pop-state, .tl-toggle-closed, .tl-newtask, .tl-date) { min-height: 36px; }
+  .tl-attr-clear { min-width: 32px; min-height: 32px; }
+  .tl-row { min-height: 44px; }
+  .tl-bl-toggle { min-height: 32px; }
+}
+
+@media (max-width: 640px) {
+  /* the board scrolls sideways one readable column at a time */
+  .tl-board { grid-auto-columns: minmax(min(78vw, 18em), 1fr); scroll-snap-type: x proximity; }
+  .tl-col { scroll-snap-align: start; }
+
+  /* a Focus row: the title wraps, and what is known about the task follows
+     on one line under it */
+  .tl-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 2px 10px;
+    padding: 8px 12px;
+  }
+  .tl-row .tl-icon { margin-top: 0.22em; }
+  .tl-row-title { white-space: normal; }
+  .tl-row-meta { grid-column: 2; max-width: none; overflow: visible; flex-wrap: wrap; gap: 2px 12px; }
+
+  /* the filters stay on one line and scroll */
+  .tl-filterbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .tl-filterbar::-webkit-scrollbar { display: none; }
+  .tl-filter, .tl-reset { flex: none; }
+  .tl-reset { margin-left: 0; }
+  .tl-filterbar:not(:has(.tl-filter-on)) .tl-reset { display: none; }
+
+  /* the task panel is a sheet at the bottom of the screen */
+  .tl-pop {
+    left: 8px !important;
+    right: 8px;
+    top: auto !important;
+    bottom: 8px;
+    width: auto;
+    max-height: 80vh;
+    padding: 14px;
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.tl-board, .tl-projects, .tl-focus) * { transition: none !important; }
+}
+
 /* ---- Theme: native -------------------------------------------------------
-   Everything above is the lineish theme. native keeps the same layout but
-   takes SilverBullet's own font and colours, drops the panel backgrounds and
-   shadows, and draws its rules as dotted lines. Selected by
+   Everything above is the lineish theme, with its own palette. native is the
+   same design in SilverBullet's colours: every colour is taken from, or mixed
+   out of, the page's text, background and accent colours, so it follows any
+   SilverBullet theme, light or dark. Widgets use the interface font, as
+   SilverBullet's own panels do; your text keeps the editor font. Selected by
    throughline.theme, which sets html[data-tl-theme]. */
 html[data-tl-theme="native"] {
-  --tl-font: var(--editor-font);
+  --tl-font: var(--ui-font, system-ui, sans-serif);
   --tl-ink: var(--root-color);
-  --tl-ink-2: var(--root-color);
+  --tl-ink-2: color-mix(in srgb, var(--root-color) 84%, transparent);
   --tl-muted: var(--subtle-color);
-  --tl-faint: var(--meta-subtle-color);
-  --tl-line: var(--ui-surface-border-color);
-  --tl-line-strong: color-mix(in srgb, var(--subtle-color) 45%, transparent);
-  --tl-dots: color-mix(in srgb, var(--subtle-color) 55%, transparent);
-  --tl-surface: transparent;
-  --tl-surface-2: transparent;
-  --tl-hover: var(--subtle-background-color);
+  --tl-faint: color-mix(in srgb, var(--subtle-color) 70%, transparent);
+  --tl-line: color-mix(in srgb, var(--root-color) 11%, transparent);
+  --tl-line-strong: color-mix(in srgb, var(--root-color) 22%, transparent);
+  --tl-surface: var(--root-background-color);
+  --tl-surface-2: color-mix(in srgb, var(--root-color) 4%, var(--root-background-color));
+  --tl-hover: color-mix(in srgb, var(--root-color) 7%, transparent);
   --tl-accent: var(--ui-accent-color);
   --tl-violet: var(--ui-accent-color);
-  --tl-shadow: none;
-  --tl-shadow-lift: none;
-  --tl-overdue-bg: transparent;
-  --tl-today-bg: transparent;
 }
-html[data-tl-theme="native"] :is(.tl-board, .tl-projects, .tl-focus) {
-  font-size: 0.95em;
-  line-height: 1.5;
-  -webkit-font-smoothing: auto;
-}
-html[data-tl-theme="native"] :is(.tl-board, .tl-projects, .tl-focus) :is(button, select, option) {
-  font-family: var(--ui-font, var(--tl-font)) !important;
-}
+html[data-tl-theme="native"] :is(.tl-board, .tl-projects, .tl-focus) { font-size: 14px; }
+html[data-tl-theme="native"] :is(.tl-pop, .tl-taskbar) { font-size: 14px; }
 
-/* small print in em, so it follows the editor's size */
-html[data-tl-theme="native"] :is(.tl-chip, .tl-ccount, .tl-health, .tl-progress, .tl-update-date,
-    .tl-stat-label, .tl-filter, .tl-button, .tl-toggle-closed, .tl-ptoolbar-count) {
-  font-size: 0.85em;
-}
-html[data-tl-theme="native"] :is(.tl-col-head, .tl-psection-head, .tl-fsection-head, .tl-ptoolbar-title,
-    .tl-stat-value, .tl-pstatus, .tl-pname, .tl-focus-empty) {
-  font-size: 1em;
-}
-
-/* chips are plain words, coloured only when they mean something */
-html[data-tl-theme="native"] .tl-chip { border: none; background: none; padding: 0; border-radius: 0; }
-html[data-tl-theme="native"] .tl-row-meta { gap: 0.9em; }
-html[data-tl-theme="native"] .tl-chips { gap: 0.9em; }
-html[data-tl-theme="native"] .tl-today { color: #9a6700; }
-html[data-theme="dark"][data-tl-theme="native"] .tl-today { color: var(--tl-amber); }
-html[data-tl-theme="native"] .tl-src { font-style: italic; }
-html[data-tl-theme="native"] .tl-pdot { border-radius: 50%; opacity: 1; }
-html[data-tl-theme="native"] .tl-ptoolbar-count { background: none; padding: 0; }
-
-/* buttons and pickers: SilverBullet's own buttons; selects read as text */
+/* buttons are SilverBullet's own */
 html[data-tl-theme="native"] .tl-button {
   color: var(--button-color);
   background: var(--button-background-color);
-  border: 1px solid var(--button-border-color);
-  border-radius: 5px;
-  box-shadow: none;
+  border-color: var(--button-border-color);
 }
 html[data-tl-theme="native"] .tl-button:hover { background: var(--button-hover-background-color); }
 html[data-tl-theme="native"] .tl-ghost { background: transparent; border-color: transparent; color: var(--tl-muted); }
-html[data-tl-theme="native"] :is(.tl-pstatus, .tl-toggle-closed, .tl-filter) {
-  color: var(--tl-ink);
-  background: transparent;
-  border: 1px dotted var(--tl-dots);
-  border-radius: 4px;
-}
-html[data-tl-theme="native"] .tl-pstatus { border-width: 0 0 1px; border-radius: 0; padding: 0 2px; margin-left: 0; }
-html[data-tl-theme="native"] :is(.tl-toggle-closed, .tl-filter):hover { background: transparent; border-style: solid; }
-html[data-tl-theme="native"] .tl-filter-on { color: var(--tl-accent); border: 1px solid var(--tl-accent); background: transparent; }
+html[data-tl-theme="native"] .tl-button.tl-delete { color: var(--tl-red); }
 
-/* dotted outlines instead of panels */
-html[data-tl-theme="native"] :is(.tl-col, .tl-card, .tl-pcard, .tl-focus-empty, .tl-fold-head) {
-  background: transparent;
-  border: 1px dotted var(--tl-dots);
-  border-radius: 4px;
-  box-shadow: none;
-}
-html[data-tl-theme="native"] :is(.tl-card, .tl-pcard):hover,
-html[data-tl-theme="native"] :is(.tl-card, .tl-pcard)[open] { border-color: var(--subtle-color); }
-/* board columns are open: a heading over a dotted rule, cards below */
-html[data-tl-theme="native"] .tl-col { border: none; padding: 0 2px; }
-html[data-tl-theme="native"] .tl-col-head {
-  font-weight: 600;
-  color: var(--tl-ink);
-  padding: 2px 2px;
-  margin-bottom: 8px;
-  border-bottom: 1px dotted var(--tl-dots);
-}
-html[data-tl-theme="native"] .tl-board { gap: 14px; }
-/* the overview stays in the text column, like the rest of the page */
+/* the overview stays in the text column, like the rest of the page, and a
+   project's name is a link in the page's link colour */
 html[data-tl-theme="native"] .tl-projects { width: auto; left: auto; transform: none; }
-html[data-tl-theme="native"] :is(.tl-card-body, .tl-pcard-body) { border-top: 1px dotted var(--tl-dots); }
-html[data-tl-theme="native"] .tl-drop-marker { box-shadow: none; }
-html[data-tl-theme="native"] .tl-newtask { border: 1px dotted var(--tl-dots); border-radius: 4px; font-size: 0.85em; }
-html[data-tl-theme="native"] .tl-pop { font-family: var(--editor-font); border-radius: 5px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); }
-html[data-tl-theme="native"] :is(.tl-pop-state, .tl-date) { border: 1px dotted var(--tl-dots); border-radius: 4px; }
-html[data-tl-theme="native"] .tl-card-notes .tl-attrs { border-bottom: 1px dotted var(--tl-dots); }
-html[data-tl-theme="native"] .tl-bl-toggle { font-size: 0.8em; font-weight: normal; }
-html[data-tl-theme="native"] .tl-chev { color: var(--tl-muted); }
-html[data-tl-theme="native"] .tl-pcard-head:hover .tl-chev { background: none; color: var(--tl-ink); }
-html[data-tl-theme="native"] .tl-pname {
-  color: var(--editor-wiki-link-page-color, var(--link-color)) !important;
-  font-weight: 600;
-  letter-spacing: 0;
-}
+html[data-tl-theme="native"] .tl-pname { color: var(--editor-wiki-link-page-color, var(--link-color)) !important; }
 
-/* section heads: bold text over a dotted rule */
-html[data-tl-theme="native"] .tl-psection-head,
-html[data-tl-theme="native"] .tl-fsection-head {
-  background: none;
-  padding: 2px 0;
-  font-weight: 600;
-  color: var(--tl-ink);
-  border-bottom: 1px dotted var(--tl-dots);
-}
-html[data-tl-theme="native"] .tl-fsection {
-  border: none;
-  border-radius: 0;
-  background: none;
-  overflow: visible;
-  margin-bottom: 14px;
-}
-/* room for the section arrow, which would otherwise poke out on the left */
-html[data-tl-theme="native"] .tl-fsection-head { padding-left: 6px; }
-html[data-tl-theme="native"] .tl-fsection[open] .tl-fsection-head { border-bottom: 1px dotted var(--tl-dots); }
-html[data-tl-theme="native"] .tl-row {
-  padding: 0 4px;
-  min-height: 2.2em;
-  border-bottom: 1px dotted var(--tl-dots);
-}
-html[data-tl-theme="native"] .tl-row:last-child { border-bottom: none; }
-
-/* health: a dot and a word, no pill */
-html[data-tl-theme="native"] .tl-health { border: none; padding: 0; border-radius: 0; }
-
-/* the stats sheet: a dotted ledger */
-html[data-tl-theme="native"] .tl-update {
-  background: none;
-  border: none;
-  border-left: 2px solid var(--tl-dots);
-  border-radius: 0;
-  padding: 2px 0 2px 10px;
-}
-html[data-tl-theme="native"] .tl-stats { border: none; border-radius: 0; column-gap: 18px; }
-html[data-tl-theme="native"] .tl-stat {
-  box-shadow: none;
-  padding: 5px 0;
-  border-bottom: 1px dotted var(--tl-dots);
-}
-html[data-tl-theme="native"] .tl-stat-value { font-weight: 500; }
 ```
