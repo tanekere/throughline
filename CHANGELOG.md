@@ -7,7 +7,7 @@ the same as 0.1.0.
 
 Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
 
-## Unreleased
+## 0.2.0 (2026-11-17)
 
 Design pass: one look for both themes, and a board that works without a mouse.
 
