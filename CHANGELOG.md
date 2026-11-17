@@ -7,6 +7,13 @@ the same as 0.1.0.
 
 Versions are released by pushing a tag `vX.Y.Z`; see Development in the README.
 
+## Unreleased
+
+- Fixed: a linked list item such as `- [[Projects/Website]] context` above a
+  task line or subtask was treated as a task by `taskLineIn`, `subtaskBlocks`,
+  `blockAt` and `tl.setTaskStateAt`, corrupting the line when changing the
+  task's state or attributes (#2).
+
 ## 0.2.0 (2026-11-17)
 
 Design pass: one look for both themes, and a board that works without a mouse.

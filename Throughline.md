@@ -588,9 +588,9 @@ end
 -- Where the task page's task line is in `text`: its first and last
 -- character, or nil when the page has no top-level task.
 local function taskLineIn(text)
-  local s = string.find(text, "^[-*] %[")
+  local s = string.find(text, "^[-*] %[[^%[%]]*%]")
   if not s then
-    s = string.find(text, "\n[-*] %[")
+    s = string.find(text, "\n[-*] %[[^%[%]]*%]")
     if s then s = s + 1 end
   end
   if not s then return nil end
@@ -1985,7 +1985,7 @@ function tl.setTaskStateAt(page, pos, name, state)
   local plain = tl.plainText(name or "")
   local probe = string.sub(plain, 1, 30)
   local function taskLine(s)
-    return string.match(s, "^%s*[-*] %[[^%]]*%]")
+    return string.match(s, "^%s*[-*] %[[^%[%]]*%]")
   end
   local function lineAt(p)
     local st = p + 1
@@ -2875,7 +2875,7 @@ local function blockAt(text, cursor)
   for i, l in ipairs(ls) do
     if cursor >= l.from and cursor <= l.to then at = i; break end
   end
-  if not at or not string.match(ls[at].text, "^%s*[-*] %[[^%]]*%] ") then return nil end
+  if not at or not string.match(ls[at].text, "^%s*[-*] %[[^%[%]]*%] ") then return nil end
   local indent = indentOf(ls[at].text)
   local last = at
   for i = at + 1, #ls do
@@ -3002,7 +3002,7 @@ local function subtaskBlocks(text)
   local ls = splitLines(text)
   local s
   for i, l in ipairs(ls) do
-    if string.match(l, "^[-*] %[") then s = i; break end
+    if string.match(l, "^[-*] %[[^%[%]]*%]") then s = i; break end
   end
   if not s then return {} end
   local blocks, cur, childIndent = {}, nil, nil
@@ -3014,7 +3014,7 @@ local function subtaskBlocks(text)
     if ind <= childIndent then
       childIndent = ind
       cur = nil
-      if string.match(l, "^%s*[-*] %[[^%]]*%] ") then
+      if string.match(l, "^%s*[-*] %[[^%[%]]*%] ") then
         cur = { lines = {} }
         table.insert(blocks, cur)
       end
