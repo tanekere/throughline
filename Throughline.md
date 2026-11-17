@@ -588,12 +588,19 @@ end
 -- Where the task page's task line is in `text`: its first and last
 -- character, or nil when the page has no top-level task.
 local function taskLineIn(text)
-  local s = string.find(text, "^[-*] %[[^%[%]]*%]")
-  if not s then
-    s = string.find(text, "\n[-*] %[[^%[%]]*%]")
-    if s then s = s + 1 end
+  local s, p = string.find(text, "^[-*] %[[^%[%]]*%]")
+  if s and string.sub(text, p + 1, p + 1) == "(" then s = nil end
+  local from = 1
+  while not s do
+    s, p = string.find(text, "\n[-*] %[[^%[%]]*%]", from)
+    if not s then return nil end
+    if string.sub(text, p + 1, p + 1) == "(" then
+      from = p + 1
+      s = nil
+    else
+      s = s + 1
+    end
   end
-  if not s then return nil end
   local e = (string.find(text, "\n", s, true) or (#text + 1)) - 1
   return s, e
 end
@@ -1985,7 +1992,8 @@ function tl.setTaskStateAt(page, pos, name, state)
   local plain = tl.plainText(name or "")
   local probe = string.sub(plain, 1, 30)
   local function taskLine(s)
-    return string.match(s, "^%s*[-*] %[[^%[%]]*%]")
+    local _, p = string.find(s, "^%s*[-*] %[[^%[%]]*%]")
+    return p and string.sub(s, p + 1, p + 1) ~= "("
   end
   local function lineAt(p)
     local st = p + 1
@@ -3002,7 +3010,8 @@ local function subtaskBlocks(text)
   local ls = splitLines(text)
   local s
   for i, l in ipairs(ls) do
-    if string.match(l, "^[-*] %[[^%[%]]*%]") then s = i; break end
+    local _, p = string.find(l, "^[-*] %[[^%[%]]*%]")
+    if p and string.sub(l, p + 1, p + 1) ~= "(" then s = i; break end
   end
   if not s then return {} end
   local blocks, cur, childIndent = {}, nil, nil
@@ -3156,6 +3165,7 @@ slashCommand.define {
     end
     local indent, rest = string.match(text, "^(%s*)(.-)%s*$")
     local state, body = string.match(rest, "^[-*] %[([^%]%[]*)%]%s*(.*)$")
+    if state and string.sub(body, 1, 1) == "(" then state = nil end
     if not state then
       state = " "
       body = string.match(rest, "^[-*]%s+(.*)$") or ((rest == "-" or rest == "*") and "" or rest)
@@ -3185,7 +3195,8 @@ local function taskLineAtCursor()
     editor.flashNotification("This is a link to a task: open it first (Ctrl+. o)", "error")
     return nil
   end
-  if not string.match(text, "^%s*[-*] %[[^%]%[]*%]") then
+  local _, p = string.find(text, "^%s*[-*] %[[^%]%[]*%]")
+  if not p or string.sub(text, p + 1, p + 1) == "(" then
     editor.flashNotification("Put the cursor on a task line", "error")
     return nil
   end
